@@ -3,11 +3,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 .DS_Store
+.gitignores
 
 # C extensions
 *.so
 
 # Distribution / packaging
+chroma_db/
+chroma.sqlite3
 .Python
 build/
 develop-eggs/
@@ -60,6 +63,7 @@ cover/
 *.log
 local_settings.py
 db.sqlite3
+chroma.sqlite3
 db.sqlite3-journal
 
 # Flask stuff:

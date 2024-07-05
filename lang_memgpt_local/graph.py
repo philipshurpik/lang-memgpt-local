@@ -127,7 +127,7 @@ def search_memory(query: str, top_k: int = 5) -> List[str]:
 
 # Function to fetch core memories for a user
 @langsmith.traceable
-def fetch_core_memories(user_id: str) -> Tuple[str, list[str]]:
+def _fetch_core_memories(user_id: str) -> Tuple[str, list[str]]:
     """Fetch core memories for a specific user."""
     path = constants.PATCH_PATH.format(user_id=user_id)
     chroma_client = utils.get_chroma_client()
@@ -146,7 +146,7 @@ def store_core_memory(memory: str, index: Optional[int] = None) -> str:
     """Store a core memory in the database."""
     config = ensure_config()
     configurable = utils.ensure_configurable(config)
-    path, existing_memories = fetch_core_memories(configurable["user_id"])
+    path, existing_memories = _fetch_core_memories(configurable["user_id"])
     
     if index is not None:
         if index < 0 or index >= len(existing_memories):
@@ -172,7 +172,7 @@ def store_core_memory(memory: str, index: Optional[int] = None) -> str:
     )
     return "Memory stored."
 
-# Combine all tools
+# Combine all tools including the tavily search tool
 all_tools = tools + [save_recall_memory, search_memory, store_core_memory]
 
 # Define the prompt template for the agent
@@ -241,7 +241,7 @@ def load_memories(state: schemas.State, config: RunnableConfig) -> schemas.State
 
     with get_executor_for_config(config) as executor:
         futures = [
-            executor.submit(fetch_core_memories, user_id),
+            executor.submit(_fetch_core_memories, user_id),
             executor.submit(search_memory.invoke, convo_str),
         ]
         _, core_memories = futures[0].result()
