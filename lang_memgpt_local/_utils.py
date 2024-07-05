@@ -5,18 +5,16 @@ from functools import lru_cache
 import langsmith
 from langchain_core.runnables import RunnableConfig
 from langchain_fireworks import FireworksEmbeddings
-from pinecone import Pinecone
+import chromadb
 
-from lang_memgpt import _schemas as schemas
-from lang_memgpt import _settings as settings
+from lang_memgpt_local import _schemas as schemas
+from lang_memgpt_local import _settings as settings
 
 _DEFAULT_DELAY = 60  # seconds
 
-
-def get_index():
-    pc = Pinecone(api_key=settings.SETTINGS.pinecone_api_key)
-    return pc.Index(settings.SETTINGS.pinecone_index_name)
-
+@lru_cache
+def get_chroma_client():
+    return chromadb.PersistentClient(path=settings.SETTINGS.chroma_persist_directory)
 
 @langsmith.traceable
 def ensure_configurable(config: RunnableConfig) -> schemas.GraphConfig:
@@ -32,10 +30,8 @@ def ensure_configurable(config: RunnableConfig) -> schemas.GraphConfig:
         ),
     }
 
-
 @lru_cache
 def get_embeddings():
     return FireworksEmbeddings(model="nomic-ai/nomic-embed-text-v1.5")
 
-
-__all__ = ["ensure_configurable"]
+__all__ = ["ensure_configurable", "get_chroma_client", "get_embeddings"]

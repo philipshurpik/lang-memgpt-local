@@ -5,10 +5,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langsmith import get_current_run_tree, test
 
-from lang_memgpt._constants import PATCH_PATH
-from lang_memgpt._schemas import GraphConfig
-from lang_memgpt.graph import memgraph
-
+from lang_memgpt_local._constants import PATCH_PATH
+from lang_memgpt_local._schemas import GraphConfig
+from lang_memgpt_local.graph import memgraph
 
 @test(output_keys=["num_mems_expected"])
 @pytest.mark.parametrize(
@@ -41,51 +40,68 @@ async def test_patch_memory(
     messages: List[str],
     num_mems_expected: int,
     existing: dict,
+    mock_chroma_client,
 ):
-    # patch lang_memgpt.graph.index with a mock
     user_id = "4fddb3ef-fcc9-4ef7-91b6-89e4a3efd112"
     thread_id = "e1d0b7f7-0a8b-4c5f-8c4b-8a6c9f6e5c7a"
     function_name = "CoreMemories"
-    with patch("lang_memgpt._utils.get_index") as get_index:
-        index = MagicMock()
-        get_index.return_value = index
-        # No existing memories
-        if existing:
-            path = PATCH_PATH.format(
-                user_id=user_id,
-                function_name=function_name,
-            )
-            index.fetch.return_value = {
-                "vectors": {path: {"metadata": {"content": json.dumps(existing)}}}
-            }
-        else:
-            index.fetch.return_value = {}
 
-        # When the memories are patched
-        await memgraph.ainvoke(
-            {
-                "messages": messages,
-            },
-            {
-                "configurable": GraphConfig(
-                    delay=0.1,
-                    user_id=user_id,
-                    thread_id=thread_id,
-                ),
-            },
+    mock_collection = mock_chroma_client.return_value.get_or_create_collection.return_value
+
+    # Set up existing memories
+    if existing:
+        path = PATCH_PATH.format(
+            user_id=user_id,
+            function_name=function_name,
         )
-        if num_mems_expected:
-            # Check if index.upsert was called
-            index.upsert.assert_called_once()
-            # Get named call args
-            vectors = index.upsert.call_args.kwargs["vectors"]
-            rt = get_current_run_tree()
-            rt.outputs = {"upserted": [v["metadata"]["content"] for v in vectors]}
-            assert len(vectors) == 1
-            # Check if the memory was added
-            mem = vectors[0]["metadata"]["content"]
-            assert mem
+        mock_collection.get.return_value = {
+            "metadatas": [{
+                "content": json.dumps(existing)
+            }]
+        }
+    else:
+        mock_collection.get.return_value = {"metadatas": []}
 
+    # When the memories are patched
+    await memgraph.ainvoke(
+        {
+            "messages": messages,
+        },
+        {
+            "configurable": GraphConfig(
+                delay=0.1,
+                user_id=user_id,
+                thread_id=thread_id,
+            ),
+        },
+    )
+
+    if num_mems_expected:
+        # Check if collection.upsert was called at least once
+        assert mock_collection.upsert.call_count >= 1
+        
+        # Get the last call arguments
+        last_call_args = mock_collection.upsert.call_args
+        
+        # Check the content of the last upsert
+        upserted_metadata = last_call_args.kwargs['metadatas'][0]
+        upserted_content = json.loads(upserted_metadata['content'])
+        assert len(upserted_content['memories']) == num_mems_expected
+        
+        # Check if the new memory is in the upserted content
+        new_memory = any("spot" in mem.lower() for mem in upserted_content['memories'])
+        assert new_memory, "New memory about Spot should be in the upserted content"
+        
+        # If there was an existing memory, check if it's still there
+        if existing:
+            existing_memory = any("spiders" in mem.lower() for mem in upserted_content['memories'])
+            assert existing_memory, "Existing memory about spiders should still be in the upserted content"
+
+        rt = get_current_run_tree()
+        rt.outputs = {"upserted": upserted_content['memories']}
+    else:
+        # If no memories are expected, ensure upsert wasn't called
+        mock_collection.upsert.assert_not_called()
 
 @test(output_keys=["num_events_expected"])
 @pytest.mark.parametrize(
@@ -113,27 +129,28 @@ async def test_patch_memory(
 async def test_insert_memory(
     messages: List[str],
     num_events_expected: int,
+    mock_chroma_client,
 ):
-    # patch lang_memgpt.graph.index with a mock
     user_id = "4fddb3ef-fcc9-4ef7-91b6-89e4a3efd112"
     thread_id = "e1d0b7f7-0a8b-4c5f-8c4b-8a6c9f6e5c7a"
-    with patch("lang_memgpt._utils.get_index") as get_index:
-        index = MagicMock()
-        get_index.return_value = index
-        index.fetch.return_value = {}
-        # When the events are inserted
-        await memgraph.ainvoke(
-            {
-                "messages": messages,
-            },
-            {
-                "configurable": GraphConfig(
-                    delay=0.1,
-                    user_id=user_id,
-                    thread_id=thread_id,
-                ),
-            },
-        )
-        if num_events_expected:
-            # Get named call args
-            assert len(index.upsert.call_args_list) >= num_events_expected
+
+    mock_collection = mock_chroma_client.return_value.get_or_create_collection.return_value
+    mock_collection.get.return_value = {"metadatas": []}
+
+    # When the events are inserted
+    await memgraph.ainvoke(
+        {
+            "messages": messages,
+        },
+        {
+            "configurable": GraphConfig(
+                delay=0.1,
+                user_id=user_id,
+                thread_id=thread_id,
+            ),
+        },
+    )
+
+    if num_events_expected:
+        # Check if collection.add was called at least num_events_expected times
+        assert mock_collection.add.call_count >= num_events_expected

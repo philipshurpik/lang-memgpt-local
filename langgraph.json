@@ -1,7 +1,0 @@
-{
-  "dependencies": ["."],
-  "graphs": {
-    "memory": "./lang_memgpt/graph.py:memgraph"
-  },
-  "env": ".env"
-}
