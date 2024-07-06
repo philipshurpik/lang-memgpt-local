@@ -1,104 +1,27 @@
-# Lang-MemGPT
+# Lang-MemGPT-Local: Local Memory-Enhanced Conversational AI
 
-This repo provides a simple example of memory service you can build and deploy using LanGraph.
+## Project Overview
 
-Inspired by papers like [MemGPT](https://memgpt.ai/) and distilled from our own works on long-term memory, the graph
-extracts memories from chat interactions and persists them to a database. This information can later be read or queried semantically
-to provide personalized context when your bot is responding to a particular user.
+Lang-MemGPT-Local is a refactored version of the original lang-memgpt project, designed to run locally and leverage ChromaDB for vector storage. This project implements a long-term memory system for AI assistants using LangChain and LangGraph, enabling more contextually aware and personalized conversations.
 
-![Process](./img/studio.gif)
+The core idea behind Lang-MemGPT is to create an AI assistant that can truly understand and remember its users, going beyond simple recall to develop an evolving understanding of the user's preferences, habits, and history.
 
-The memory graph handles thread process deduplication and supports continuous updates to a single "memory schema" as well as "event-based" memories that can be queried semantically.
+## Key Adaptations
 
-![Memory Diagram](./img/memory_graph.png)
+1. **Local Deployment**: Removed dependencies on LangGraph Cloud, allowing the entire system to run on a local machine.
+2. **ChromaDB Integration**: Replaced Pinecone with ChromaDB for vector storage, enabling local storage of embeddings and memories.
+3. **Memory Retrieval**: Implemented robust memory querying and retrieval functions to fetch relevant past interactions.
+4. **Error Handling**: Enhanced error handling and logging throughout the system for better debugging and stability.
+5. **Anthropic API Compatibility**: Adjusted the chat interface to handle various response formats from the Anthropic API.
 
-#### Project Structure
+## Notes for Future Developers
 
-```bash
-├── langgraph.json # LangGraph Cloud Configuration
-├── lang_memgpt
-│   ├── __init__.py
-│   └── graph.py # Define the agent w/ memory
-├── poetry.lock
-├── pyproject.toml # Project dependencies
-└── tests # Add testing + evaluation logic
-    └── evals
-        └── test_memories.py
-```
+1. **Memory Storage**: The current implementation uses ChromaDB for storing memories. If you need to scale up or use a different vector database, focus on modifying the `_utils.py` and `graph.py` files.
 
-## Quickstart
+2. **API Compatibility**: The chat interface in `example_local.py` is designed to handle various response formats. If integrating with a new AI model API, ensure the `process_token` method in the `Chat` class can handle the new response format.
 
-This quick start will get your agent with long-term memory deployed on [LangGraph Cloud](https://langchain-ai.github.io/langgraph/cloud/). Once created, you can interact with it from any API.
+3. **Logging and Debugging**: Extensive logging has been implemented. Adjust logging levels in `example_local.py` as needed for your development process.
 
-#### Prerequisites
+4. **LangSmith Integration**: The project includes LangSmith tracking, which can be disabled if not needed. See the logging configuration in `example_local.py`.
 
-This example defaults to using Pinecone for its memory database, and `nomic-ai/nomic-embed-text-v1.5` as the text encoder (hosted on Fireworks). For the LLM, we will use `accounts/fireworks/models/firefunction-v2`, which is a fine-tuned variant of Meta's `llama-3`.
-
-Before starting, make sure your resources are created.
-
-1. [Create an index](https://docs.pinecone.io/reference/api/control-plane/create_index) with a dimension size of `768`. Note down your Pinecone API key, index name, and namespac for the next step.
-2. [Create an API Key](https://fireworks.ai/api-keys) to use for the LLM & embeddings models served on Fireworks.
-
-#### Deploy to LangGraph Cloud
-
-**Note:** (_Closed Beta_) LangGraph Cloud is a managed service for deploying and hosting LangGraph applications. It is currently (as of 26 June, 2024) in closed beta. If you are interested in applying for access, please fill out [this form](https://www.langchain.com/langgraph-cloud-beta).
-
-To deploy this example on LangGraph, fork the [repo](https://github.com/langchain-ai/langgraph-memory).
-
-Next, navigate to the 🚀 deployments tab on [LangSmith](https://smith.langchain.com/o/ebbaf2eb-769b-4505-aca2-d11de10372a4/).
-
-**If you have not deployed to LangGraph Cloud before:** there will be a button that shows up saying `Import from GitHub`. You’ll need to follow that flow to connect LangGraph Cloud to GitHub.
-
-Once you have set up your GitHub connection, select **+New Deployment**. Fill out the required information, including:
-
-1. Your GitHub username (or organization) and the name of the repo you just forked.
-2. You can leave the defaults for the config file (`langgraph.config`) and branch (`main`)
-3. Environment variables (see below)
-
-The default required environment variables can be found in [.env.example](.env.example) and are copied below:
-
-```bash
-# .env
-PINECONE_API_KEY=...
-PINECONE_INDEX_NAME=...
-PINECONE_NAMESPACE=...
-FIREWORKS_API_KEY=...
-
-# You can add other keys as appropriate, depending on
-# the services you are using.
-```
-
-You can fill these out locally, copy the .env file contents, and paste them in the first `Name` argument.
-
-Assuming you've followed the steps above, in just a couple of minutes, you should have a working memory service deployed!
-
-Now let's try it out.
-
-## Part 2: Setting up a Slack Bot
-
-The langgraph cloud deployment exposes a general-purpose stateful agent via an API. You can connect to it from a notebook, UI, or even a Slack or Discord bot.
-
-In this repo, we've included an `event_server` to listen in on Slack message events so you can talk with
-your bot from slack.
-
-The server is a simple [FastAPI](https://fastapi.tiangolo.com/tutorial/first-steps/) app that uses [Slack Bolt](https://slack.dev/bolt-python/tutorial/getting-started) to interact with Slack's API.
-
-In the next step, we will show how to deploy this on GCP's Cloud Run.
-
-#### How to deploy as a Discord bot
-
-
-So now you've deployed the API, how do you turn this into an app?
-
-Check out the [event server README](./event_server/README.md) for instructions on how to set up a Discord connector on Cloud Run.
-
-
-## How to evaluate
-
-Memory management can be challenging to get right. To make sure your schemas suit your applications' needs, we recommend starting from an evaluation set,
-adding to it over time as you find and address common errors in your service.
-
-We have provided a few example evaluation cases in [the test file here](./tests/evals/test_memories.py). As you can see, the metrics themselves don't have to be terribly complicated,
-especially not at the outset.
-
-We use [LangSmith's @test decorator](https://docs.smith.langchain.com/how_to_guides/evaluation/unit_testing#write-a-test) to sync all the evalutions to LangSmith so you can better optimize your system and identify the root cause of any issues that may arise.
+5. **Memory Types**: The system currently uses 'core' and 'recall' memory types. Expanding on these or adding new types would involve modifying the `graph.py` file and potentially the ChromaDB schema.
