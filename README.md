@@ -4,7 +4,7 @@
 
 Lang-MemGPT-Local is a refactored version of the original lang-memgpt project, designed to run locally and leverage ChromaDB for vector storage. This project implements a long-term memory system for AI assistants using LangChain and LangGraph, enabling more contextually aware and personalized conversations.
 
-The core idea behind Lang-MemGPT is to create an AI assistant that can truly understand and remember its users, going beyond simple recall to develop an evolving understanding of the user's preferences, habits, and history.
+The core  idea behind Lang-MemGPT is to create an AI assistant that can truly understand and remember its users, going beyond simple recall to develop an evolving understanding of the user's preferences, habits, and history.
 
 ## Key Adaptations
 
