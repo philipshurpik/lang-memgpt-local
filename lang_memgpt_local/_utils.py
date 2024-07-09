@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 from functools import lru_cache
-
 import langsmith
 from langchain_core.runnables import RunnableConfig
 from langchain_fireworks import FireworksEmbeddings
-import chromadb
-
+from importlib import import_module
 from lang_memgpt_local import _schemas as schemas
 from lang_memgpt_local import _settings as settings
 
 _DEFAULT_DELAY = 60  # seconds
 
+
 @lru_cache
-def get_chroma_client():
-    return chromadb.PersistentClient(path=settings.SETTINGS.chroma_persist_directory)
+def get_vectordb_client():
+    module_name, class_name = settings.SETTINGS.vectordb_class.rsplit('.', 1)
+    module = import_module(module_name)
+    VectorDBClass = getattr(module, class_name)
+    return VectorDBClass(**settings.SETTINGS.vectordb_config)
+
+# Other utility functions...
 
 @langsmith.traceable
 def ensure_configurable(config: RunnableConfig) -> schemas.GraphConfig:
