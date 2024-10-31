@@ -1,21 +1,10 @@
-from __future__ import annotations
-import tiktoken
-import json
 import logging
-import uuid
 from datetime import datetime, timezone
-from typing import Optional, Tuple, List, Dict, Any
 
-import langsmith
-from langchain_community.tools.tavily_search import TavilySearchResults
+import tiktoken
 from langchain_core.messages.utils import get_buffer_string
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables.config import (
-    RunnableConfig,
-    ensure_config,
-    get_executor_for_config,
-)
-from langchain_core.tools import tool
+from langchain_core.runnables.config import RunnableConfig, get_executor_for_config
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 from typing_extensions import Literal
@@ -23,119 +12,13 @@ from typing_extensions import Literal
 from lang_memgpt_local import _constants as constants
 from lang_memgpt_local import _schemas as schemas
 from lang_memgpt_local import _utils as utils
+from lang_memgpt_local.tools import save_recall_memory, search_memory, store_core_memory, fetch_core_memories
+from lang_memgpt_local.tools import search_tool
 
-
-# Set up logging
 logger = logging.getLogger("memory")
 logger.setLevel(logging.DEBUG)
 
-# Initialize the search tool for external information retrieval
-search_tool = TavilySearchResults(max_results=1)
-tools = [search_tool]
-
-# Initialize the database adapter
-db_adapter = utils.get_vectordb_client()
-
-
-@tool
-async def save_recall_memory(memory: str) -> str:
-    """Save a memory to the database for later semantic retrieval."""
-    config = ensure_config()
-    configurable = utils.ensure_configurable(config)
-    embeddings = utils.get_embeddings()
-    vector = await embeddings.aembed_query(memory)
-
-    current_time = datetime.now(tz=timezone.utc)
-    event_id = str(uuid.uuid4())
-    path = constants.INSERT_PATH.format(
-        user_id=configurable["user_id"],
-        event_id=event_id,
-    )
-
-    metadata = {
-        constants.PAYLOAD_KEY: memory,
-        constants.PATH_KEY: path,
-        constants.TIMESTAMP_KEY: current_time.isoformat(),
-        constants.TYPE_KEY: "recall",
-        "user_id": configurable["user_id"],
-    }
-
-    db_adapter.add_memory(event_id, vector, metadata, memory)
-    return memory
-
-
-@tool
-def search_memory(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-    """Search for memories in the database based on semantic similarity."""
-    try:
-        config = ensure_config()
-        configurable = utils.ensure_configurable(config)
-        embeddings = utils.get_embeddings()
-        vector = embeddings.embed_query(query)
-
-        where_clause = {
-            "$and": [
-                {"user_id": {"$eq": configurable["user_id"]}},
-                {constants.TYPE_KEY: {"$eq": "recall"}}
-            ]
-        }
-
-        results = db_adapter.query_memories(vector, where_clause, top_k)
-
-        # Return the full metadata instead of just the payload
-        return results
-
-    except Exception as e:
-        logger.error(f"Error in search_memory: {str(e)}")
-        return []
-
-
-@langsmith.traceable
-def fetch_core_memories(user_id: str) -> Tuple[str, list[str]]:
-    """Fetch core memories for a specific user."""
-    path = constants.PATCH_PATH.format(user_id=user_id)
-    collection = db_adapter.get_collection("core_memories")
-    results = collection.get(ids=[path], include=["metadatas"])
-
-    memories = []
-    if results and results['metadatas']:
-        payload = results['metadatas'][0][constants.PAYLOAD_KEY]
-        memories = json.loads(payload)["memories"]
-    return path, memories
-
-
-@tool
-def store_core_memory(memory: str, index: Optional[int] = None) -> str:
-    """Store a core memory in the database."""
-    config = ensure_config()
-    configurable = utils.ensure_configurable(config)
-    path, existing_memories = fetch_core_memories(configurable["user_id"])
-
-    if index is not None:
-        if index < 0 or index >= len(existing_memories):
-            return "Error: Index out of bounds."
-        existing_memories[index] = memory
-    else:
-        if memory not in existing_memories:
-            existing_memories.insert(0, memory)
-
-    db_adapter.upsert(
-        "core_memories",
-        [path],
-        [{
-            constants.PAYLOAD_KEY: json.dumps({"memories": existing_memories}),
-            constants.PATH_KEY: path,
-            constants.TIMESTAMP_KEY: datetime.now(tz=timezone.utc).isoformat(),
-            constants.TYPE_KEY: "core",
-            "user_id": configurable["user_id"],
-        }],
-        [json.dumps({"memories": existing_memories})]
-    )
-    return "Memory stored."
-
-
-# Combine all tools including the tavily search tool
-all_tools = tools + [save_recall_memory, search_memory, store_core_memory]
+all_tools = [search_tool, save_recall_memory, search_memory, store_core_memory]
 
 # Define the prompt template for the agent
 prompt = ChatPromptTemplate.from_messages(
@@ -166,6 +49,7 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+
 # Main agent function
 async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
     """Process the current state and generate a response using the LLM."""
@@ -173,10 +57,10 @@ async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
     llm = utils.init_chat_model(configurable["model"])
     bound = prompt | llm.bind_tools(all_tools)
     core_str = (
-        "<core_memory>\n" + "\n".join(state["core_memories"]) + "\n</core_memory>"
+            "<core_memory>\n" + "\n".join(state["core_memories"]) + "\n</core_memory>"
     )
     recall_str = (
-        "<recall_memory>\n" + "\n".join(state["recall_memories"]) + "\n</recall_memory>"
+            "<recall_memory>\n" + "\n".join(state["recall_memories"]) + "\n</recall_memory>"
     )
     logger.debug(f"Core memories: {core_str}")
     logger.debug(f"Recall memories: {recall_str}")
@@ -191,6 +75,7 @@ async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
     return {
         "messages": prediction,
     }
+
 
 # Function to load memories for the current conversation
 def load_memories(state: schemas.State, config: RunnableConfig) -> schemas.State:
@@ -213,6 +98,7 @@ def load_memories(state: schemas.State, config: RunnableConfig) -> schemas.State
         "recall_memories": recall_memories,
     }
 
+
 async def query_memories(state: schemas.State, config: RunnableConfig) -> schemas.State:
     """Query the user's memories."""
     configurable = utils.ensure_configurable(config)
@@ -223,11 +109,11 @@ async def query_memories(state: schemas.State, config: RunnableConfig) -> schema
     last_messages = state["messages"][-5:]  # Adjust this number as needed
     query = " ".join([str(m.content) for m in last_messages if m.type == "human"])
     logger.debug(f"Querying memories with: {query}")
-    
+
     vec = await embeddings.aembed_query(query)
     chroma_client = utils.get_vectordb_client()
     collection = chroma_client.get_or_create_collection("memories")
-    
+
     # Correct the where clause format
     where_clause = {
         "$and": [
@@ -235,15 +121,15 @@ async def query_memories(state: schemas.State, config: RunnableConfig) -> schema
             {constants.TYPE_KEY: {"$eq": "recall"}}
         ]
     }
-    
+
     logger.debug(f"Searching for memories with where clause: {where_clause}")
-    
+
     results = collection.query(
         query_embeddings=[vec],
         where=where_clause,
         n_results=10,
     )
-    
+
     # Correct handling of ChromaDB query results
     memories = []
     if results['metadatas']:
@@ -253,13 +139,12 @@ async def query_memories(state: schemas.State, config: RunnableConfig) -> schema
             elif isinstance(metadata, dict):
                 if constants.PAYLOAD_KEY in metadata:
                     memories.append(metadata[constants.PAYLOAD_KEY])
-    
+
     logger.debug(f"Retrieved memories: {memories}")
-    
+
     return {
         "recall_memories": memories,
     }
-
 
 
 # Function to determine the next step in the graph
@@ -269,6 +154,7 @@ def route_tools(state: schemas.State) -> Literal["tools", "__end__"]:
     if msg.tool_calls:
         return "tools"
     return END
+
 
 # Create the LangGraph StateGraph
 builder = StateGraph(schemas.State, schemas.GraphConfig)
