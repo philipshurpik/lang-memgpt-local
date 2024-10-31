@@ -4,8 +4,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Union, Dict, Any
 
+from dotenv import load_dotenv
 import langsmith
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import AnyMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
@@ -21,7 +21,8 @@ from lang_memgpt_local import (
 )
 from lang_memgpt_local.graph import memgraph
 
-logging.basicConfig(level=logging.DEBUG)
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # Adjust logging level for LangSmith client
 logging.getLogger('langsmith.client').setLevel(logging.ERROR)
@@ -121,7 +122,7 @@ You have noted the following memorable events from previous interactions with th
 async def bot(state: ChatState, config: RunnableConfig) -> ChatState:
     """Prompt the bot to respond to the user, incorporating memories (if provided)."""
     configurable = _ensure_configurable(config)
-    model = init_chat_model(configurable["model"])
+    model = utils.init_chat_model(configurable["model"])
     chain = PROMPT | model
     memories = format_memories(state["user_memories"])
     m = await chain.ainvoke(

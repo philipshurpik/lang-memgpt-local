@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from typing import Optional, Tuple, List, Dict, Any
 
 import langsmith
-from langchain.chat_models import init_chat_model
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.messages.utils import get_buffer_string
 from langchain_core.prompts import ChatPromptTemplate
@@ -69,7 +68,7 @@ async def save_recall_memory(memory: str) -> str:
 def search_memory(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     """Search for memories in the database based on semantic similarity."""
     try:
-        config = utils.ensure_config()
+        config = ensure_config()
         configurable = utils.ensure_configurable(config)
         embeddings = utils.get_embeddings()
         vector = embeddings.embed_query(query)
@@ -171,7 +170,7 @@ prompt = ChatPromptTemplate.from_messages(
 async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
     """Process the current state and generate a response using the LLM."""
     configurable = utils.ensure_configurable(config)
-    llm = init_chat_model(configurable["model"])
+    llm = utils.init_chat_model(configurable["model"])
     bound = prompt | llm.bind_tools(all_tools)
     core_str = (
         "<core_memory>\n" + "\n".join(state["core_memories"]) + "\n</core_memory>"

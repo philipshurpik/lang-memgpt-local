@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 import langsmith
 from langchain_core.runnables import RunnableConfig
-from langchain_fireworks import FireworksEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from importlib import import_module
 from lang_memgpt_local import _schemas as schemas
 from lang_memgpt_local import _settings as settings
@@ -36,6 +36,17 @@ def ensure_configurable(config: RunnableConfig) -> schemas.GraphConfig:
 
 @lru_cache
 def get_embeddings():
-    return FireworksEmbeddings(model="nomic-ai/nomic-embed-text-v1.5")
+    return OpenAIEmbeddings(
+        model="text-embedding-3-small"
+    )
 
-__all__ = ["ensure_configurable", "get_chroma_client", "get_embeddings"]
+
+def init_chat_model(model_name: str = None):
+    """Initialize the chat model."""
+    return ChatOpenAI(
+        model_name=model_name or settings.SETTINGS.model,
+        temperature=0.7,  # adjust as needed
+        streaming=True
+    )
+
+__all__ = ["ensure_configurable"]
