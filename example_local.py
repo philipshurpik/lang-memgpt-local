@@ -1,8 +1,9 @@
 import asyncio
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Union, Dict, Any
-import logging
+
 import langsmith
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AnyMessage
@@ -25,10 +26,12 @@ logger = logging.getLogger(__name__)
 # Adjust logging level for LangSmith client
 logging.getLogger('langsmith.client').setLevel(logging.ERROR)
 
+
 class ChatState(TypedDict):
     """The state of the chatbot."""
     messages: Annotated[List[AnyMessage], add_messages]
     user_memories: List[dict]
+
 
 class ChatConfigurable(TypedDict):
     """The configurable fields for the chatbot."""
@@ -36,6 +39,7 @@ class ChatConfigurable(TypedDict):
     thread_id: str
     model: str
     delay: Optional[float]
+
 
 def _ensure_configurable(config: RunnableConfig) -> ChatConfigurable:
     """Ensure the configuration is valid."""
@@ -47,6 +51,7 @@ def _ensure_configurable(config: RunnableConfig) -> ChatConfigurable:
         ),
         delay=config["configurable"].get("delay", 60),
     )
+
 
 PROMPT = ChatPromptTemplate.from_messages(
     [
@@ -62,10 +67,12 @@ PROMPT = ChatPromptTemplate.from_messages(
     time=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
 )
 
+
 @langsmith.traceable
 def format_query(messages: List[AnyMessage]) -> str:
     """Format the query for the user's memories."""
     return " ".join([str(m.content) for m in messages if m.type == "human"][-5:])
+
 
 async def query_memories(state: ChatState, config: RunnableConfig) -> ChatState:
     """Query the user's memories."""
@@ -77,9 +84,9 @@ async def query_memories(state: ChatState, config: RunnableConfig) -> ChatState:
     vec = await embeddings.aembed_query(query)
     chroma_client = utils.get_chroma_client()
     collection = chroma_client.get_or_create_collection("memories")
-    
+
     with langsmith.trace(
-        "chroma_query", inputs={"query": query, "user_id": user_id}
+            "chroma_query", inputs={"query": query, "user_id": user_id}
     ) as rt:
         results = collection.query(
             query_embeddings=[vec],
@@ -87,11 +94,12 @@ async def query_memories(state: ChatState, config: RunnableConfig) -> ChatState:
             n_results=10,
         )
         rt.outputs["response"] = results
-    
+
     memories = [m[constants.PAYLOAD_KEY] for m in results['metadatas'][0]]
     return {
         "user_memories": memories,
     }
+
 
 @langsmith.traceable
 def format_memories(memories: List[dict]) -> str:
@@ -108,6 +116,7 @@ You have noted the following memorable events from previous interactions with th
 {memories}
 </memories>
 """
+
 
 async def bot(state: ChatState, config: RunnableConfig) -> ChatState:
     """Prompt the bot to respond to the user, incorporating memories (if provided)."""
@@ -127,6 +136,7 @@ async def bot(state: ChatState, config: RunnableConfig) -> ChatState:
         "messages": [m],
     }
 
+
 class MemorableEvent(BaseModel):
     """A memorable event."""
     description: str
@@ -134,21 +144,23 @@ class MemorableEvent(BaseModel):
         description="Names of participants in the event and their relationship to the user."
     )
 
+
 async def post_messages(state: ChatState, config: RunnableConfig) -> ChatState:
     """Process messages and store memories."""
     configurable = _ensure_configurable(config)
     thread_id = config["configurable"]["thread_id"]
     memory_thread_id = uuid.uuid5(uuid.NAMESPACE_URL, f"memory_{thread_id}")
-    
+
     # Here you would implement the logic to process messages and store memories
     # For example:
     # memories = extract_memories(state["messages"])
     # for memory in memories:
     #     await save_recall_memory(memory)
-    
+
     return {
         "messages": [],
     }
+
 
 builder = StateGraph(ChatState, ChatConfigurable)
 builder.add_node(query_memories)
@@ -160,38 +172,40 @@ builder.add_edge("bot", "post_messages")
 
 chat_graph = builder.compile(checkpointer=MemorySaver())
 
+
 # Example usage
 async def main():
     user_id = str(uuid.uuid4())
     thread_id = str(uuid.uuid4())
-    
+
     chat = Chat(user_id, thread_id)
-    
+
     response = await chat("Hi there")
     print("Bot:", response)
-    
+
     response = await chat("I've been planning a surprise party for my friend Steve.")
     print("Bot:", response)
-    
+
     response = await chat("Steve really likes crocheting. Maybe I can do something with that?")
     print("Bot:", response)
-    
+
     response = await chat("He's also into capoeira...")
     print("Bot:", response)
-    
+
     # Wait for a minute to simulate time passing
-    print("Waiting for a minute to simulate time passing...")
-    await asyncio.sleep(60)
-    
+    print("Waiting for a 30 sec to simulate time passing...")
+    await asyncio.sleep(30)
+
     # Start a new conversation
     thread_id_2 = str(uuid.uuid4())
     chat2 = Chat(user_id, thread_id_2)
-    
+
     response = await chat2("Remember me?")
     print("Bot:", response)
-    
+
     response = await chat2("What do you remember about Steve?")
     print("Bot:", response)
+
 
 class Chat:
     def __init__(self, user_id: str, thread_id: str):
@@ -201,7 +215,7 @@ class Chat:
     async def __call__(self, query: str) -> str:
         logger.debug(f"Chat called with query: {query}")
         logger.debug(f"User ID: {self.user_id}, Thread ID: {self.thread_id}")
-        
+
         chunks = memgraph.astream_events(
             input={
                 "messages": [("human", query)],
@@ -229,7 +243,7 @@ class Chat:
                     logger.debug(f"Tool output: {event.get('data', {}).get('output')}")
         except Exception as e:
             logger.error(f"Error during chat streaming: {str(e)}")
-        
+
         print()  # New line after all output
         full_response = "".join(res)
         logger.debug(f"Full response: {full_response}")
@@ -249,7 +263,7 @@ class Chat:
                 logger.warning(f"Received dict without 'text' key: {tok}")
         else:
             logger.warning(f"Unexpected token type: {type(tok)}")
-    
+
+
 if __name__ == "__main__":
     asyncio.run(main())
-
