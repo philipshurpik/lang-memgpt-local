@@ -112,20 +112,20 @@ def search_memory(query: str, top_k: int = 5) -> List[str]:
 
 
 @langsmith.traceable
-def fetch_core_memories(user_id: str) -> Tuple[str, list[str]]:
+def fetch_core_memories(user_id: str) -> Tuple[str, dict[str, str]]:
     """Fetch core memories for a specific user.
 
     Args:
         user_id (str): The ID of the user.
 
     Returns:
-        Tuple[str, list[str]]: The path and list of core memories.
+        Tuple[str, dict[str, str]]: The path and dictionary of core memories.
     """
     path = constants.PATCH_PATH.format(user_id=user_id)
     collection = db_adapter.get_collection("core_memories")
     results = collection.get(ids=[path], include=["metadatas"])
 
-    memories = []
+    memories = {}
     if results and results['metadatas']:
         payload = results['metadatas'][0][constants.PAYLOAD_KEY]
         memories = json.loads(payload)["memories"]
@@ -133,12 +133,12 @@ def fetch_core_memories(user_id: str) -> Tuple[str, list[str]]:
 
 
 @tool
-def store_core_memory(memory: str, index: Optional[int] = None) -> str:
-    """Store a core memory about user, like his name or basic preferences in the database.
+def store_core_memory(key: str, value: str) -> str:
+    """Store a core memory about user in key-value format.
 
     Args:
-        memory (str): The memory to store.
-        index (Optional[int]): The index at which to store the memory.
+        key (str): The key/type of the memory (e.g., "name", "age", "preference.color")
+        value (str): The value to store.
 
     Returns:
         str: A confirmation message.
@@ -147,13 +147,7 @@ def store_core_memory(memory: str, index: Optional[int] = None) -> str:
     configurable = utils.ensure_configurable(config)
     path, existing_memories = fetch_core_memories(configurable["user_id"])
 
-    if index is not None:
-        if index < 0 or index >= len(existing_memories):
-            return "Error: Index out of bounds."
-        existing_memories[index] = memory
-    else:
-        if memory not in existing_memories:
-            existing_memories.insert(0, memory)
+    existing_memories[key] = value
 
     db_adapter.upsert(
         "core_memories",
@@ -167,4 +161,4 @@ def store_core_memory(memory: str, index: Optional[int] = None) -> str:
         }],
         [json.dumps({"memories": existing_memories})]
     )
-    return "Memory stored."
+    return f"Memory stored with key: {key}"

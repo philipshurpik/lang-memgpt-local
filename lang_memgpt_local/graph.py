@@ -77,7 +77,7 @@ async def agent_llm(state: schemas.State, config: RunnableConfig) -> schemas.Sta
     configurable = utils.ensure_configurable(config)
     llm = utils.init_chat_model(configurable["model"])
     bound = agent_prompt | llm.bind_tools(all_tools, tool_choice="auto")
-    core_str = "<core_memory>\n" + "\n".join(state["core_memories"]) + "\n</core_memory>"
+    core_str = "<core_memory>\n" + "\n".join([f"{k}: {v}" for k, v in state["core_memories"].items()]) + "\n</core_memory>"
     recall_str = "<recall_memory>\n" + "\n".join(state["recall_memories"]) + "\n</recall_memory>"
     logger.debug(f"Core memories: {core_str}")
     logger.debug(f"Recall memories: {recall_str}")
