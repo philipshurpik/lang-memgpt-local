@@ -14,7 +14,7 @@ async def main():
 
     chat = Chat(user_id, thread_id)
 
-    response = await chat("Hello")
+    response = await chat("Hello!  What's your name?")
     print("Bot:", response)
 
     response = await chat("My name is Luna. I like to eat chocolate")

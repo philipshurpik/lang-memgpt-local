@@ -34,7 +34,8 @@ class Chat:
         )
         res = []
         async for event in chunks:
-            if event.get("event") == "on_chat_model_stream":
+            if (event.get("event") == "on_chat_model_stream"
+                    and event.get('metadata', {}).get('langgraph_node', {}) != 'agent_llm'):
                 tok = event["data"]["chunk"].content
                 self.process_token(tok, res)
             elif event.get("event") == "on_tool_start":
