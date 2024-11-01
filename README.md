@@ -25,3 +25,6 @@ The core  idea behind Lang-MemGPT is to create an AI assistant that can truly un
 4. **LangSmith Integration**: The project includes LangSmith tracking, which can be disabled if not needed. See the logging configuration in `example_local.py`.
 
 5. **Memory Types**: The system currently uses 'core' and 'recall' memory types. Expanding on these or adding new types would involve modifying the `graph.py` file and potentially the ChromaDB schema.
+
+## Streamlit run demo:
+streamlit run streamlit_app.py --server.port 8501 --server.address 0.0.0.0

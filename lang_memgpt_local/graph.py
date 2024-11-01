@@ -41,7 +41,7 @@ async def agent_llm(state: schemas.State, config: RunnableConfig) -> schemas.Sta
         schemas.State: The updated state with the agent's response.
     """
     configurable = utils.ensure_configurable(config)
-    llm = utils.init_chat_model(configurable["model"])
+    llm = utils.init_agent_model(configurable["model"])
     bound = prompts["agent"] | llm.bind_tools(all_tools, tool_choice="auto")
     core_str = "<core_memory>\n" + "\n".join([f"{k}: {v}" for k, v in state["core_memories"].items()]) + "\n</core_memory>"
     recall_str = "<recall_memory>\n" + "\n".join(state["recall_memories"]) + "\n</recall_memory>"
@@ -65,8 +65,7 @@ async def agent_llm(state: schemas.State, config: RunnableConfig) -> schemas.Sta
 
 async def response_llm(state: schemas.State, config: dict) -> schemas.State:
     """Final LLM to generate response using memories but no tools"""
-    configurable = utils.ensure_configurable(config)
-    llm = utils.init_chat_model(configurable["model"])
+    llm = utils.init_response_model()
     bound = prompts["response"] | llm
 
     response = await bound.ainvoke({
