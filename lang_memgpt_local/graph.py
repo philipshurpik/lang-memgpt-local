@@ -2,8 +2,9 @@ import logging
 from datetime import datetime, timezone
 
 import tiktoken
+from langchain import hub
+from dotenv import load_dotenv
 from langchain_core.messages.utils import get_buffer_string
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables.config import RunnableConfig, get_executor_for_config
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -15,6 +16,7 @@ from lang_memgpt_local import _utils as utils
 from lang_memgpt_local.tools import save_recall_memory, search_memory, store_core_memory, fetch_core_memories
 from lang_memgpt_local.tools import search_tool
 
+load_dotenv()
 logger = logging.getLogger("memory")
 logger.setLevel(logging.DEBUG)
 
@@ -22,46 +24,10 @@ memory_tools = [save_recall_memory, store_core_memory]
 utility_tools = [search_tool, search_memory]
 all_tools = memory_tools + utility_tools
 
-# Define the prompt template for the agent
-agent_prompt = ChatPromptTemplate.from_messages([
-    ("system",
-     "You are a helpful assistant with advanced long-term memory capabilities."
-     " Powered by a stateless LLM, you must rely on external memory to store"
-     " information between conversations."
-     " And you have access to tool for external search (search_tool)\n\n"
-     "Memory Usage Guidelines:\n"
-     "1. Actively use memory tools (save_core_memory, save_recall_memory)"
-     " to build a comprehensive understanding of the user.\n"
-     "2. Make informed suppositions based on stored memories.\n"
-     "3. Regularly reflect on past interactions to identify patterns.\n"
-     "4. Update your mental model of the user with new information.\n"
-     "5. Cross-reference new information with existing memories.\n"
-     "6. Prioritize storing emotional context and personal values.\n"
-     "7. Use memory to anticipate needs and tailor responses.\n"
-     "8. Recognize changes in user's perspectives over time.\n"
-     "9. Leverage memories for personalized examples.\n"
-     "10. Recall past experiences to inform problem-solving.\n\n"
-     "## Core Memories\n"
-     "Core memories are fundamental to understanding the user, his name, basis preferences and are always available:\n"
-     "{core_memories}\n\n"
-     "## Recall Memories\n"
-     "Recall memories are contextually retrieved based on the current conversation:\n{recall_memories}\n\n"
-     "Current time: {current_time}"
-     ),
-    ("placeholder", "{messages}")
-])
-
-response_prompt = ChatPromptTemplate.from_messages([
-    ("system",
-     "You are a helpful assistant with access to memories and search results."
-     " Use this context to provide personalized and informed responses.\n\n"
-     "Core memories about the user:\n{core_memories}\n\n"
-     "Contextual recall memories:\n{recall_memories}\n\n"
-     "Search results:\n{search_results}\n\n"
-     "Current time: {current_time}"
-     ),
-    ("placeholder", "{messages}")
-])
+prompts = {
+    "agent": hub.pull("langgraph-agent"),
+    "response": hub.pull("langgraph-response"),
+}
 
 
 async def agent_llm(state: schemas.State, config: RunnableConfig) -> schemas.State:
@@ -76,7 +42,7 @@ async def agent_llm(state: schemas.State, config: RunnableConfig) -> schemas.Sta
     """
     configurable = utils.ensure_configurable(config)
     llm = utils.init_chat_model(configurable["model"])
-    bound = agent_prompt | llm.bind_tools(all_tools, tool_choice="auto")
+    bound = prompts["agent"] | llm.bind_tools(all_tools, tool_choice="auto")
     core_str = "<core_memory>\n" + "\n".join([f"{k}: {v}" for k, v in state["core_memories"].items()]) + "\n</core_memory>"
     recall_str = "<recall_memory>\n" + "\n".join(state["recall_memories"]) + "\n</recall_memory>"
     logger.debug(f"Core memories: {core_str}")
@@ -100,7 +66,7 @@ async def response_llm(state: schemas.State, config: dict) -> schemas.State:
     """Final LLM to generate response using memories but no tools"""
     configurable = utils.ensure_configurable(config)
     llm = utils.init_chat_model(configurable["model"])
-    bound = response_prompt | llm
+    bound = prompts["response"] | llm
 
     response = await bound.ainvoke({
         "messages": state["messages"],
