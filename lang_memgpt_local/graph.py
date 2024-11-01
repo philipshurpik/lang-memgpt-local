@@ -157,16 +157,16 @@ def route_tools(state: schemas.State) -> Literal["tools", "final_llm"]:
 # Create the LangGraph StateGraph
 builder = StateGraph(schemas.State, schemas.GraphConfig)
 builder.add_node("load_memories", load_memories)
-builder.add_node("agent", agent)
+builder.add_node("agent_llm", agent)
 builder.add_node("tools", ToolNode(all_tools))
-builder.add_node("final_llm", final_llm)
+builder.add_node("response_llm", final_llm)
 
 # Add edges to the graph
 builder.add_edge(START, "load_memories")
-builder.add_edge("load_memories", "agent")
-builder.add_conditional_edges("agent", route_tools, ["tools", "final_llm"])
-builder.add_edge("tools", "final_llm")
-builder.add_edge("final_llm", END)
+builder.add_edge("load_memories", "agent_llm")
+builder.add_conditional_edges("agent_llm", route_tools, ["tools", "response_llm"])
+builder.add_edge("tools", "response_llm")
+builder.add_edge("response_llm", END)
 
 # Compile the graph into an executable LangGraph
 memory = MemorySaver()
