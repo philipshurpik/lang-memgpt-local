@@ -1,7 +1,12 @@
 import asyncio
 import uuid
+
 import streamlit as st
+from dotenv import load_dotenv
+
 from lang_memgpt_local.chat import Chat
+
+load_dotenv()
 
 # Define available users
 USERS = {
@@ -53,7 +58,7 @@ for message in st.session_state.chat_history:
 if prompt := st.chat_input(f"Message {USERS[selected_user]['icon']} {selected_user.capitalize()}..."):
     with st.chat_message("user"):
         st.markdown(prompt)
-    
+
     # Add user message to current user's chat history
     st.session_state.chat_history.append({"role": "user", "content": prompt})
 
@@ -63,6 +68,6 @@ if prompt := st.chat_input(f"Message {USERS[selected_user]['icon']} {selected_us
         # Since we're using asyncio, we need to run it in a coroutine
         response = asyncio.run(st.session_state.chats[selected_user](prompt))
         message_placeholder.markdown(response)
-    
+
     # Add assistant response to current user's chat history
     st.session_state.chat_history.append({"role": "assistant", "content": response})
