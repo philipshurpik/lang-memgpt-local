@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph import add_messages
@@ -24,10 +24,9 @@ class State(TypedDict):
     """The core memories associated with the user."""
     recall_memories: List[str]
     """The recall memories retrieved for the current context."""
-    search_results: str
-    """The result of search in memories and external services"""
-    final_response: str
+    final_response: Optional[str]
     """response to final llm"""
+
 
 __all__ = [
     "State",

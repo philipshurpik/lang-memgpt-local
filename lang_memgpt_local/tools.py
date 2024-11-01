@@ -1,17 +1,23 @@
 import json
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, Tuple, List
+from typing import Tuple, List
 
 import langsmith
+from dotenv import load_dotenv
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.runnables.config import ensure_config
 from langchain_core.tools import tool
+from langchain_openai import OpenAIEmbeddings
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
 
 from lang_memgpt_local import _constants as constants
 from lang_memgpt_local import _utils as utils
 
+load_dotenv()
 logger = logging.getLogger("memory")
 logger.setLevel(logging.INFO)
 
@@ -77,6 +83,31 @@ def search_tool(query: str) -> str:
     except Exception as e:
         logger.error(f"Error in search_tool: {str(e)}")
         return f"Error performing search: {str(e)}"
+
+
+@tool
+def ask_wisdom(query: str) -> str:
+    """Ask wisdom library question that can be answered using a knowledge base of human wisdom, prominent thinkers, psychologists, and philosophers.
+
+    Args:
+        query (str): The search question sentence
+
+    Returns:
+        str: Search results 
+    """
+    try:
+        qdrant_vectorstore = QdrantVectorStore(
+            client=QdrantClient(url=os.getenv("QDRANT_URL"), api_key=os.getenv("QDRANT_API_KEY")),
+            collection_name=os.getenv("QDRANT_COLLECTION"),
+            embedding=OpenAIEmbeddings(),
+        )
+        results = qdrant_vectorstore.similarity_search(query, k=5)
+        formatted_results = "\n\n".join([doc.page_content.strip() for doc in results])
+        return formatted_results
+
+    except Exception as e:
+        logger.error(f"Error in ask rag db: {str(e)}")
+        return f"Error performing ask rag db: {str(e)}"
 
 
 @tool

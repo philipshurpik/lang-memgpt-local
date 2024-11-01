@@ -23,6 +23,8 @@ tiktoken = "^0.7.0"
 chromadb = "^0.4.22"
 python-dotenv = "^1.0.1"
 streamlit = "^1.39.0"
+langchain-qdrant = "^0.1.4"
+qdrant-client = "^1.12.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.10"

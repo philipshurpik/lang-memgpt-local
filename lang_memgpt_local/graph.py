@@ -14,14 +14,14 @@ from typing_extensions import Literal
 from lang_memgpt_local import _schemas as schemas
 from lang_memgpt_local import _utils as utils
 from lang_memgpt_local.tools import save_recall_memory, search_memory, store_core_memory, fetch_core_memories
-from lang_memgpt_local.tools import search_tool
+from lang_memgpt_local.tools import search_tool, ask_wisdom
 
 load_dotenv()
 logger = logging.getLogger("memory")
 logger.setLevel(logging.DEBUG)
 
 memory_tools = [save_recall_memory, store_core_memory]
-utility_tools = [search_tool, search_memory]
+utility_tools = [search_tool, search_memory, ask_wisdom]
 all_tools = memory_tools + utility_tools
 
 prompts = {
@@ -59,6 +59,7 @@ async def agent_llm(state: schemas.State, config: RunnableConfig) -> schemas.Sta
         "messages": response,
         "core_memories": state["core_memories"],
         "recall_memories": state["recall_memories"],
+        "final_response": None,
     }
 
 
@@ -72,7 +73,6 @@ async def response_llm(state: schemas.State, config: dict) -> schemas.State:
         "messages": state["messages"],
         "core_memories": state["core_memories"],
         "recall_memories": state["recall_memories"],
-        "search_results": state["search_results"],
         "current_time": datetime.now(tz=timezone.utc).isoformat()
     })
 
@@ -81,7 +81,6 @@ async def response_llm(state: schemas.State, config: dict) -> schemas.State:
         "final_response": response.content,
         "core_memories": state["core_memories"],
         "recall_memories": state["recall_memories"],
-        "search_results": state["search_results"]
     }
 
 
@@ -112,6 +111,7 @@ def load_memories(state: schemas.State, config: RunnableConfig) -> schemas.State
         "messages": state["messages"],
         "core_memories": core_memories,
         "recall_memories": recall_memories,
+        "final_response": None,
     }
 
 

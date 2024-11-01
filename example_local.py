@@ -17,8 +17,11 @@ async def main():
     response = await chat("Hi there, my name is Luna. I like to eat chocolate")
     print("Bot:", response)
 
-    # response = await chat("What chocolate can you recommend?")
-    # print("Bot:", response)
+    response = await chat("What is the weather in Warsaw?")
+    print("Bot:", response)
+
+    response = await chat("What can you tell me about motivation?")
+    print("Bot:", response)
     #
     # response = await chat("I like ritter sport")
     # print("Bot:", response)
