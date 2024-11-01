@@ -50,7 +50,7 @@ class Chat:
 
     def process_token(self, tok: Union[str, list, Dict[str, Any]], res: list):
         if isinstance(tok, str):
-            print(tok, end="", flush=True)
+            # print(tok, end="", flush=True)
             res.append(tok)
         elif isinstance(tok, list):
             for item in tok:
