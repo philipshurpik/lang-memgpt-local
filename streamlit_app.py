@@ -13,8 +13,12 @@ USERS = {
 }
 
 # Initialize session state for all chat histories if they don't exist
-if "chat_histories" not in st.session_state:
-    st.session_state.chat_histories = {user: [] for user in USERS.keys()}
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+# Track the previously selected user
+if "previous_user" not in st.session_state:
+    st.session_state.previous_user = None
 
 # Initialize session state for thread IDs if they don't exist
 if "thread_ids" not in st.session_state:
@@ -22,10 +26,7 @@ if "thread_ids" not in st.session_state:
 
 # Initialize chat instances if they don't exist
 if "chats" not in st.session_state:
-    st.session_state.chats = {
-        user: Chat(USERS[user]["id"], st.session_state.thread_ids[user]) 
-        for user in USERS.keys()
-    }
+    st.session_state.chats = {user: Chat(USERS[user]["id"], st.session_state.thread_ids[user]) for user in USERS.keys()}
 
 st.title("MemGPT Chat Demo")
 
@@ -36,31 +37,25 @@ selected_user = st.sidebar.selectbox(
     format_func=lambda x: f"{USERS[x]['icon']} {x.capitalize()}",
 )
 
-# Button to start new conversation for current user
-if st.sidebar.button("New Conversation"):
+if st.session_state.previous_user != selected_user:
     st.session_state.thread_ids[selected_user] = str(uuid.uuid4())
-    st.session_state.chats[selected_user] = Chat(
-        USERS[selected_user]["id"], 
-        st.session_state.thread_ids[selected_user]
-    )
-    st.session_state.chat_histories[selected_user] = []
+    st.session_state.chats[selected_user] = Chat(USERS[selected_user]["id"], st.session_state.thread_ids[selected_user])
+    st.session_state.chat_history = []
+    st.session_state.previous_user = selected_user
     st.rerun()
 
 # Display current user's chat history
-for message in st.session_state.chat_histories[selected_user]:
+for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # Accept user input
 if prompt := st.chat_input(f"Message {USERS[selected_user]['icon']} {selected_user.capitalize()}..."):
-    # Display user message in chat message container
     with st.chat_message("user"):
         st.markdown(prompt)
     
     # Add user message to current user's chat history
-    st.session_state.chat_histories[selected_user].append(
-        {"role": "user", "content": prompt}
-    )
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
 
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
@@ -70,6 +65,4 @@ if prompt := st.chat_input(f"Message {USERS[selected_user]['icon']} {selected_us
         message_placeholder.markdown(response)
     
     # Add assistant response to current user's chat history
-    st.session_state.chat_histories[selected_user].append(
-        {"role": "assistant", "content": response}
-    )
+    st.session_state.chat_history.append({"role": "assistant", "content": response})

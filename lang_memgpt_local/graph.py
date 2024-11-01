@@ -61,7 +61,7 @@ llm_prompt = ChatPromptTemplate.from_messages([
 ])
 
 
-async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
+async def agent_llm(state: schemas.State, config: RunnableConfig) -> schemas.State:
     """Process the current state and generate a response using the LLM.
 
     Args:
@@ -93,7 +93,7 @@ async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
     }
 
 
-async def final_llm(state: schemas.State, config: dict) -> schemas.State:
+async def response_llm(state: schemas.State, config: dict) -> schemas.State:
     """Final LLM to generate response using memories but no tools"""
     configurable = utils.ensure_configurable(config)
     llm = utils.init_chat_model(configurable["model"])
@@ -146,20 +146,20 @@ def load_memories(state: schemas.State, config: RunnableConfig) -> schemas.State
     }
 
 
-def route_tools(state: schemas.State) -> Literal["tools", "final_llm"]:
+def route_tools(state: schemas.State) -> Literal["tools", "response_llm"]:
     """Route to tools or final LLM based on agent response"""
     msg = state["messages"][-1]
     if msg.tool_calls:
         return "tools"
-    return "final_llm"
+    return "response_llm"
 
 
 # Create the LangGraph StateGraph
 builder = StateGraph(schemas.State, schemas.GraphConfig)
 builder.add_node("load_memories", load_memories)
-builder.add_node("agent_llm", agent)
+builder.add_node("agent_llm", agent_llm)
 builder.add_node("tools", ToolNode(all_tools))
-builder.add_node("response_llm", final_llm)
+builder.add_node("response_llm", response_llm)
 
 # Add edges to the graph
 builder.add_edge(START, "load_memories")
