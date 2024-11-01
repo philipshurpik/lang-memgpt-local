@@ -16,7 +16,12 @@ logger = logging.getLogger("memory")
 logger.setLevel(logging.INFO)
 
 # Initialize the search tool for external information retrieval
-search_tool = TavilySearchResults(max_results=1)
+search_wrapper = TavilySearchResults(
+    max_results=5,  # Optional: Configure number of results
+    include_raw_content=True,  # Optional: Include raw content
+    include_images=False,  # Optional: Don't include images
+    search_depth="advanced"  # Optional: Use advanced search
+)
 
 # Initialize the database adapter
 db_adapter = utils.get_vectordb_client()
@@ -54,6 +59,24 @@ async def save_recall_memory(memory: str) -> str:
 
     db_adapter.add_memory(event_id, vector, metadata, memory)
     return memory
+
+
+@tool
+def search_tool(query: str) -> str:
+    """Search the internet for information about a query.
+
+    Args:
+        query (str): The search query
+
+    Returns:
+        str: Search results summary
+    """
+    try:
+        results = search_wrapper.run(query)
+        return results
+    except Exception as e:
+        logger.error(f"Error in search_tool: {str(e)}")
+        return f"Error performing search: {str(e)}"
 
 
 @tool

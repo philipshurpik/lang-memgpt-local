@@ -8,7 +8,7 @@ from importlib import import_module
 from lang_memgpt_local import _schemas as schemas
 from lang_memgpt_local import _settings as settings
 
-_DEFAULT_DELAY = 60  # seconds
+_DEFAULT_DELAY = 20  # seconds
 
 
 @lru_cache

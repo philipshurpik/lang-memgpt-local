@@ -27,8 +27,8 @@ async def main():
     print("Bot:", response)
 
     # Wait for a minute to simulate time passing
-    print("Waiting for a 60 sec to simulate time passing...")
-    await asyncio.sleep(60)
+    print("Waiting for a 20 sec to simulate time passing...")
+    await asyncio.sleep(20)
 
     # Start a new conversation
     thread_id_2 = str(uuid.uuid4())
