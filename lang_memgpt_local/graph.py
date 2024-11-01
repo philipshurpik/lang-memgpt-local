@@ -70,7 +70,7 @@ async def response_llm(state: schemas.State, config: dict) -> schemas.State:
     bound = prompts["response"] | llm
 
     response = await bound.ainvoke({
-        "messages": state["messages"],
+        "messages": state["messages"][:-1] if state["messages"][-1].type == 'ai' else state["messages"],
         "core_memories": state["core_memories"],
         "recall_memories": state["recall_memories"],
         "current_time": datetime.now(tz=timezone.utc).isoformat()
