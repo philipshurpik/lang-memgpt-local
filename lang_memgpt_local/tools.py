@@ -29,7 +29,7 @@ db_adapter = utils.get_vectordb_client()
 
 @tool
 async def save_recall_memory(memory: str) -> str:
-    """Save a memory to the database for later semantic retrieval.
+    """Save a contextual memory to the database for later semantic retrieval.
 
     Args:
         memory (str): The memory to be saved.
@@ -134,7 +134,7 @@ def fetch_core_memories(user_id: str) -> Tuple[str, list[str]]:
 
 @tool
 def store_core_memory(memory: str, index: Optional[int] = None) -> str:
-    """Store a core memory in the database.
+    """Store a core memory about user, like his name or basic preferences in the database.
 
     Args:
         memory (str): The memory to store.

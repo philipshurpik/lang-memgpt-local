@@ -30,7 +30,7 @@ agent_prompt = ChatPromptTemplate.from_messages([
      " information between conversations."
      " And you have access to tool for external search (search_tool)\n\n"
      "Memory Usage Guidelines:\n"
-     "1. Actively use memory tools (save_core_memory, save_recall_memory,)"
+     "1. Actively use memory tools (save_core_memory, save_recall_memory)"
      " to build a comprehensive understanding of the user.\n"
      "2. Make informed suppositions based on stored memories.\n"
      "3. Regularly reflect on past interactions to identify patterns.\n"
@@ -41,14 +41,17 @@ agent_prompt = ChatPromptTemplate.from_messages([
      "8. Recognize changes in user's perspectives over time.\n"
      "9. Leverage memories for personalized examples.\n"
      "10. Recall past experiences to inform problem-solving.\n\n"
-     "Core memories about the user:\n{core_memories}\n\n"
-     "Contextual recall memories:\n{recall_memories}\n\n"
+     "## Core Memories\n"
+     "Core memories are fundamental to understanding the user, his name, basis preferences and are always available:\n"
+     "{core_memories}\n\n"
+     "## Recall Memories\n"
+     "Recall memories are contextually retrieved based on the current conversation:\n{recall_memories}\n\n"
      "Current time: {current_time}"
      ),
     ("placeholder", "{messages}")
 ])
 
-llm_prompt = ChatPromptTemplate.from_messages([
+response_prompt = ChatPromptTemplate.from_messages([
     ("system",
      "You are a helpful assistant with access to memories and search results."
      " Use this context to provide personalized and informed responses.\n\n"
@@ -97,7 +100,7 @@ async def response_llm(state: schemas.State, config: dict) -> schemas.State:
     """Final LLM to generate response using memories but no tools"""
     configurable = utils.ensure_configurable(config)
     llm = utils.init_chat_model(configurable["model"])
-    bound = llm_prompt | llm
+    bound = response_prompt | llm
 
     response = await bound.ainvoke({
         "messages": state["messages"],
