@@ -2,7 +2,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, List
 
 import langsmith
 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -24,7 +24,14 @@ db_adapter = utils.get_vectordb_client()
 
 @tool
 async def save_recall_memory(memory: str) -> str:
-    """Save a memory to the database for later semantic retrieval."""
+    """Save a memory to the database for later semantic retrieval.
+
+    Args:
+        memory (str): The memory to be saved.
+
+    Returns:
+        str: The saved memory.
+    """
     config = ensure_config()
     configurable = utils.ensure_configurable(config)
     embeddings = utils.get_embeddings()
@@ -50,8 +57,16 @@ async def save_recall_memory(memory: str) -> str:
 
 
 @tool
-def search_memory(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-    """Search for memories in the database based on semantic similarity."""
+def search_memory(query: str, top_k: int = 5) -> List[str]:
+    """Search for memories in the database based on semantic similarity.
+
+    Args:
+        query (str): The search query.
+        top_k (int): The number of results to return.
+
+    Returns:
+        list[str]: A list of relevant memories.
+    """
     try:
         config = ensure_config()
         configurable = utils.ensure_configurable(config)
@@ -75,7 +90,14 @@ def search_memory(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
 
 @langsmith.traceable
 def fetch_core_memories(user_id: str) -> Tuple[str, list[str]]:
-    """Fetch core memories for a specific user."""
+    """Fetch core memories for a specific user.
+
+    Args:
+        user_id (str): The ID of the user.
+
+    Returns:
+        Tuple[str, list[str]]: The path and list of core memories.
+    """
     path = constants.PATCH_PATH.format(user_id=user_id)
     collection = db_adapter.get_collection("core_memories")
     results = collection.get(ids=[path], include=["metadatas"])
@@ -89,7 +111,15 @@ def fetch_core_memories(user_id: str) -> Tuple[str, list[str]]:
 
 @tool
 def store_core_memory(memory: str, index: Optional[int] = None) -> str:
-    """Store a core memory in the database."""
+    """Store a core memory in the database.
+
+    Args:
+        memory (str): The memory to store.
+        index (Optional[int]): The index at which to store the memory.
+
+    Returns:
+        str: A confirmation message.
+    """
     config = ensure_config()
     configurable = utils.ensure_configurable(config)
     path, existing_memories = fetch_core_memories(configurable["user_id"])
