@@ -14,16 +14,16 @@ async def main():
 
     chat = Chat(user_id, thread_id)
 
-    response = await chat("Hi there, my name is Philip. I like to eat pizza with pineapple")
-    print("Bot:", response)
-
-    response = await chat("I enjoy belgian and german chocolate")
+    response = await chat("Hi there, my name is Philip. I like to eat chocolate")
     print("Bot:", response)
 
     response = await chat("What chocolate can you recommend?")
     print("Bot:", response)
 
     response = await chat("I like ritter sport")
+    print("Bot:", response)
+
+    response = await chat("What are actual US president election polls results?")
     print("Bot:", response)
 
     # Wait for a minute to simulate time passing

@@ -5,6 +5,7 @@ import tiktoken
 from langchain_core.messages.utils import get_buffer_string
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables.config import RunnableConfig, get_executor_for_config
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 from typing_extensions import Literal
@@ -17,52 +18,47 @@ from lang_memgpt_local.tools import search_tool
 logger = logging.getLogger("memory")
 logger.setLevel(logging.DEBUG)
 
-all_tools = [search_tool, save_recall_memory, search_memory, store_core_memory]
+memory_tools = [save_recall_memory, store_core_memory]
+utility_tools = [search_tool, search_memory]
+all_tools = memory_tools + utility_tools
 
 # Define the prompt template for the agent
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You are a helpful assistant with advanced long-term memory"
-            " capabilities. Powered by a stateless LLM, you must rely on"
-            " external memory to store information between conversations."
-            " Utilize the available memory tools to store and retrieve"
-            " important details that will help you better attend to the user's needs and understand their context.\n\n"
-            "Memory Usage Guidelines:\n"
-            "1. Actively use memory tools (save_core_memory, save_recall_memory)"
-            " to build a comprehensive understanding of the user.\n"
-            "2. Make informed suppositions and extrapolations based on stored memories.\n"
-            "3. Regularly reflect on past interactions to identify patterns and preferences.\n"
-            "4. Update your mental model of the user with each new piece of information.\n"
-            "5. Cross-reference new information with existing memories for consistency.\n"
-            "6. Prioritize storing emotional context and personal values alongside facts.\n"
-            "7. Use memory to anticipate needs and tailor responses to the user's style.\n"
-            "8. Recognize and acknowledge changes in the user's situation or perspectives over time.\n"
-            "9. Leverage memories to provide personalized examples and analogies.\n"
-            "10. Recall past challenges or successes to inform current problem-solving.\n\n"
-            "## Core Memories\n"
-            "Core memories are fundamental to understanding the user, his name, basis preferences and are"
-            " always available:\n{core_memories}\n\n"
-            "## Recall Memories\n"
-            "Recall memories are contextually retrieved based on the current"
-            " conversation:\n{recall_memories}\n\n"
-            "## Instructions\n"
-            "Engage with the user naturally, as a trusted colleague or friend."
-            " There's no need to explicitly mention your memory capabilities."
-            " Instead, seamlessly incorporate your understanding of the user"
-            " into your responses. Be attentive to subtle cues and underlying"
-            " emotions. Adapt your communication style to match the user's"
-            " preferences and current emotional state. Use tools to persist"
-            " information you want to retain in the next conversation. If you"
-            " do call tools, all text preceding the tool call is an internal"
-            " message. Respond AFTER calling the tool, once you have"
-            " confirmation that the tool completed successfully.\n\n"
-            "Current system time: {current_time}\n\n",
-        ),
-        ("placeholder", "{messages}"),
-    ]
-)
+agent_prompt = ChatPromptTemplate.from_messages([
+    ("system",
+     "You are a helpful assistant with advanced long-term memory capabilities."
+     " Powered by a stateless LLM, you must rely on external memory to store"
+     " information between conversations."
+     " And you have access to tool for external search (search_tool)\n\n"
+     "Memory Usage Guidelines:\n"
+     "1. Actively use memory tools (save_core_memory, save_recall_memory,)"
+     " to build a comprehensive understanding of the user.\n"
+     "2. Make informed suppositions based on stored memories.\n"
+     "3. Regularly reflect on past interactions to identify patterns.\n"
+     "4. Update your mental model of the user with new information.\n"
+     "5. Cross-reference new information with existing memories.\n"
+     "6. Prioritize storing emotional context and personal values.\n"
+     "7. Use memory to anticipate needs and tailor responses.\n"
+     "8. Recognize changes in user's perspectives over time.\n"
+     "9. Leverage memories for personalized examples.\n"
+     "10. Recall past experiences to inform problem-solving.\n\n"
+     "Core memories about the user:\n{core_memories}\n\n"
+     "Contextual recall memories:\n{recall_memories}\n\n"
+     "Current time: {current_time}"
+     ),
+    ("placeholder", "{messages}")
+])
+
+llm_prompt = ChatPromptTemplate.from_messages([
+    ("system",
+     "You are a helpful assistant with access to memories and search results."
+     " Use this context to provide personalized and informed responses.\n\n"
+     "Core memories about the user:\n{core_memories}\n\n"
+     "Contextual recall memories:\n{recall_memories}\n\n"
+     "Search results:\n{search_results}\n\n"
+     "Current time: {current_time}"
+     ),
+    ("placeholder", "{messages}")
+])
 
 
 async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
@@ -77,16 +73,12 @@ async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
     """
     configurable = utils.ensure_configurable(config)
     llm = utils.init_chat_model(configurable["model"])
-    bound = prompt | llm.bind_tools(all_tools, tool_choice="auto")
-    core_str = (
-            "<core_memory>\n" + "\n".join(state["core_memories"]) + "\n</core_memory>"
-    )
-    recall_str = (
-            "<recall_memory>\n" + "\n".join(state["recall_memories"]) + "\n</recall_memory>"
-    )
+    bound = agent_prompt | llm.bind_tools(all_tools, tool_choice="auto")
+    core_str = "<core_memory>\n" + "\n".join(state["core_memories"]) + "\n</core_memory>"
+    recall_str = "<recall_memory>\n" + "\n".join(state["recall_memories"]) + "\n</recall_memory>"
     logger.debug(f"Core memories: {core_str}")
     logger.debug(f"Recall memories: {recall_str}")
-    prediction = await bound.ainvoke(
+    response = await bound.ainvoke(
         {
             "messages": state["messages"],
             "core_memories": core_str,
@@ -95,7 +87,32 @@ async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
         }
     )
     return {
-        "messages": prediction,
+        "messages": response,
+        "core_memories": state["core_memories"],
+        "recall_memories": state["recall_memories"],
+    }
+
+
+async def final_llm(state: schemas.State, config: dict) -> schemas.State:
+    """Final LLM to generate response using memories but no tools"""
+    configurable = utils.ensure_configurable(config)
+    llm = utils.init_chat_model(configurable["model"])
+    bound = llm_prompt | llm
+
+    response = await bound.ainvoke({
+        "messages": state["messages"],
+        "core_memories": state["core_memories"],
+        "recall_memories": state["recall_memories"],
+        "search_results": state["search_results"],
+        "current_time": datetime.now(tz=timezone.utc).isoformat()
+    })
+
+    return {
+        "messages": state["messages"],
+        "final_response": response.content,
+        "core_memories": state["core_memories"],
+        "recall_memories": state["recall_memories"],
+        "search_results": state["search_results"]
     }
 
 
@@ -123,24 +140,18 @@ def load_memories(state: schemas.State, config: RunnableConfig) -> schemas.State
         _, core_memories = futures[0].result()
         recall_memories = futures[1].result()
     return {
+        "messages": state["messages"],
         "core_memories": core_memories,
         "recall_memories": recall_memories,
     }
 
 
-def route_tools(state: schemas.State) -> Literal["tools", "__end__"]:
-    """Determine whether to use tools or end the conversation based on the last message.
-
-    Args:
-        state (schemas.State): The current state of the conversation.
-
-    Returns:
-        Literal["tools", "__end__"]: The next step in the graph.
-    """
+def route_tools(state: schemas.State) -> Literal["tools", "final_llm"]:
+    """Route to tools or final LLM based on agent response"""
     msg = state["messages"][-1]
     if msg.tool_calls:
         return "tools"
-    return END
+    return "final_llm"
 
 
 # Create the LangGraph StateGraph
@@ -148,15 +159,18 @@ builder = StateGraph(schemas.State, schemas.GraphConfig)
 builder.add_node("load_memories", load_memories)
 builder.add_node("agent", agent)
 builder.add_node("tools", ToolNode(all_tools))
+builder.add_node("final_llm", final_llm)
 
 # Add edges to the graph
 builder.add_edge(START, "load_memories")
 builder.add_edge("load_memories", "agent")
-builder.add_conditional_edges("agent", route_tools)
-builder.add_edge("tools", "agent")
+builder.add_conditional_edges("agent", route_tools, ["tools", "final_llm"])
+builder.add_edge("tools", "final_llm")
+builder.add_edge("final_llm", END)
 
 # Compile the graph into an executable LangGraph
-memgraph = builder.compile()
+memory = MemorySaver()
+memgraph = builder.compile(checkpointer=memory)
 
 __all__ = ["memgraph"]
 

@@ -24,7 +24,10 @@ class State(TypedDict):
     """The core memories associated with the user."""
     recall_memories: List[str]
     """The recall memories retrieved for the current context."""
-
+    search_results: str
+    """The result of search in memories and external services"""
+    final_response: str
+    """response to final llm"""
 
 __all__ = [
     "State",
