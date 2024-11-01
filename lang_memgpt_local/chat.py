@@ -33,18 +33,15 @@ class Chat:
             version="v1",
         )
         res = []
-        try:
-            async for event in chunks:
-                if event.get("event") == "on_chat_model_stream":
-                    tok = event["data"]["chunk"].content
-                    self.process_token(tok, res)
-                elif event.get("event") == "on_tool_start":
-                    logger.debug(f"Tool started: {event.get('name')}")
-                elif event.get("event") == "on_tool_end":
-                    logger.debug(f"Tool ended: {event.get('name')}")
-                    logger.debug(f"Tool output: {event.get('data', {}).get('output')}")
-        except Exception as e:
-            logger.error(f"Error during chat streaming: {str(e)}")
+        async for event in chunks:
+            if event.get("event") == "on_chat_model_stream":
+                tok = event["data"]["chunk"].content
+                self.process_token(tok, res)
+            elif event.get("event") == "on_tool_start":
+                logger.debug(f"Tool started: {event.get('name')}")
+            elif event.get("event") == "on_tool_end":
+                logger.debug(f"Tool ended: {event.get('name')}")
+                logger.debug(f"Tool output: {event.get('data', {}).get('output')}")
 
         print()  # New line after all output
         full_response = "".join(res)

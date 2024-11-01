@@ -28,31 +28,21 @@ prompt = ChatPromptTemplate.from_messages(
             " capabilities. Powered by a stateless LLM, you must rely on"
             " external memory to store information between conversations."
             " Utilize the available memory tools to store and retrieve"
-            " important details that will help you better attend to the user's"
-            " needs and understand their context.\n\n"
+            " important details that will help you better attend to the user's needs and understand their context.\n\n"
             "Memory Usage Guidelines:\n"
             "1. Actively use memory tools (save_core_memory, save_recall_memory)"
             " to build a comprehensive understanding of the user.\n"
-            "2. Make informed suppositions and extrapolations based on stored"
-            " memories.\n"
-            "3. Regularly reflect on past interactions to identify patterns and"
-            " preferences.\n"
-            "4. Update your mental model of the user with each new piece of"
-            " information.\n"
-            "5. Cross-reference new information with existing memories for"
-            " consistency.\n"
-            "6. Prioritize storing emotional context and personal values"
-            " alongside facts.\n"
-            "7. Use memory to anticipate needs and tailor responses to the"
-            " user's style.\n"
-            "8. Recognize and acknowledge changes in the user's situation or"
-            " perspectives over time.\n"
-            "9. Leverage memories to provide personalized examples and"
-            " analogies.\n"
-            "10. Recall past challenges or successes to inform current"
-            " problem-solving.\n\n"
+            "2. Make informed suppositions and extrapolations based on stored memories.\n"
+            "3. Regularly reflect on past interactions to identify patterns and preferences.\n"
+            "4. Update your mental model of the user with each new piece of information.\n"
+            "5. Cross-reference new information with existing memories for consistency.\n"
+            "6. Prioritize storing emotional context and personal values alongside facts.\n"
+            "7. Use memory to anticipate needs and tailor responses to the user's style.\n"
+            "8. Recognize and acknowledge changes in the user's situation or perspectives over time.\n"
+            "9. Leverage memories to provide personalized examples and analogies.\n"
+            "10. Recall past challenges or successes to inform current problem-solving.\n\n"
             "## Core Memories\n"
-            "Core memories are fundamental to understanding the user and are"
+            "Core memories are fundamental to understanding the user, his name, basis preferences and are"
             " always available:\n{core_memories}\n\n"
             "## Recall Memories\n"
             "Recall memories are contextually retrieved based on the current"
@@ -87,7 +77,7 @@ async def agent(state: schemas.State, config: RunnableConfig) -> schemas.State:
     """
     configurable = utils.ensure_configurable(config)
     llm = utils.init_chat_model(configurable["model"])
-    bound = prompt | llm.bind_tools(all_tools)
+    bound = prompt | llm.bind_tools(all_tools, tool_choice="auto")
     core_str = (
             "<core_memory>\n" + "\n".join(state["core_memories"]) + "\n</core_memory>"
     )
@@ -121,7 +111,7 @@ def load_memories(state: schemas.State, config: RunnableConfig) -> schemas.State
     """
     configurable = utils.ensure_configurable(config)
     user_id = configurable["user_id"]
-    tokenizer = tiktoken.encoding_for_model("gpt-4o")
+    tokenizer = tiktoken.encoding_for_model("gpt-4o-mini")
     convo_str = get_buffer_string(state["messages"])
     convo_str = tokenizer.decode(tokenizer.encode(convo_str)[:2048])
 

@@ -66,9 +66,7 @@ def search_memory(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         }
 
         results = db_adapter.query_memories(vector, where_clause, top_k)
-
-        # Return the full metadata instead of just the payload
-        return results
+        return [x[constants.PAYLOAD_KEY] for x in results]
 
     except Exception as e:
         logger.error(f"Error in search_memory: {str(e)}")
