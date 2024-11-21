@@ -1,8 +1,8 @@
 import logging
 from typing import Union, Dict, Any
 
-from lang_memgpt_local import _settings as settings
 from lang_memgpt_local.graph import memgraph
+from langchain_core.messages import HumanMessage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,26 +18,19 @@ class Chat:
         logger.debug(f"Chat called with query: {query}")
         logger.debug(f"User ID: {self.user_id}, Thread ID: {self.thread_id}")
 
+        config = {"configurable": {"user_id": self.user_id, "thread_id": self.thread_id}}
+        input_message = HumanMessage(content=query)
         chunks = memgraph.astream_events(
-            input={
-                "messages": [("human", query)],
-            },
-            config={
-                "configurable": {
-                    "user_id": self.user_id,
-                    "thread_id": self.thread_id,
-                    "model": settings.SETTINGS.model,
-                    "delay": 4,
-                }
-            },
-            version="v1",
+            input={"messages": [input_message]},
+            config=config,
+            version="v2",
         )
         res = []
         async for event in chunks:
-            if (event.get("event") == "on_chat_model_stream"
-                    and event.get('metadata', {}).get('langgraph_node', {}) != 'agent_llm'):
-                tok = event["data"]["chunk"].content
-                self.process_token(tok, res)
+            if event.get("event") == "on_chat_model_stream":
+                if event.get('metadata', {}).get('langgraph_node', {}) == 'response_llm':
+                    tok = event["data"]["chunk"].content
+                    self.process_token(tok, res)
             elif event.get("event") == "on_tool_start":
                 logger.debug(f"Tool started: {event.get('name')}")
             elif event.get("event") == "on_tool_end":
@@ -51,7 +44,6 @@ class Chat:
 
     def process_token(self, tok: Union[str, list, Dict[str, Any]], res: list):
         if isinstance(tok, str):
-            # print(tok, end="", flush=True)
             res.append(tok)
         elif isinstance(tok, list):
             for item in tok:
