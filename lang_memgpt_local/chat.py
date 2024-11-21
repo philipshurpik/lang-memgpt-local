@@ -1,5 +1,4 @@
 import logging
-from typing import Union, Dict, Any
 
 from lang_memgpt_local.graph import memgraph
 from langchain_core.messages import HumanMessage
@@ -14,7 +13,7 @@ class Chat:
         self.thread_id = thread_id
         self.user_id = user_id
 
-    async def __call__(self, query: str) -> str:
+    async def stream_response(self, query: str):
         logger.debug(f"Chat called with query: {query}")
         logger.debug(f"User ID: {self.user_id}, Thread ID: {self.thread_id}")
 
@@ -25,33 +24,22 @@ class Chat:
             config=config,
             version="v2",
         )
-        res = []
+
         async for event in chunks:
             if event.get("event") == "on_chat_model_stream":
                 if event.get('metadata', {}).get('langgraph_node', {}) == 'response_llm':
                     tok = event["data"]["chunk"].content
-                    self.process_token(tok, res)
+                    yield tok  # Yield the token as it's received
             elif event.get("event") == "on_tool_start":
                 logger.debug(f"Tool started: {event.get('name')}")
             elif event.get("event") == "on_tool_end":
                 logger.debug(f"Tool ended: {event.get('name')}")
                 logger.debug(f"Tool output: {event.get('data', {}).get('output')}")
 
-        print()  # New line after all output
+    async def __call__(self, query: str) -> str:
+        res = []
+        async for tok in self.stream_response(query):
+            res.append(tok)
         full_response = "".join(res)
         logger.debug(f"Full response: {full_response}")
         return full_response
-
-    def process_token(self, tok: Union[str, list, Dict[str, Any]], res: list):
-        if isinstance(tok, str):
-            res.append(tok)
-        elif isinstance(tok, list):
-            for item in tok:
-                self.process_token(item, res)
-        elif isinstance(tok, dict):
-            if 'text' in tok:
-                self.process_token(tok['text'], res)
-            else:
-                logger.warning(f"Received dict without 'text' key: {tok}")
-        else:
-            logger.warning(f"Unexpected token type: {type(tok)}")

@@ -62,12 +62,21 @@ if prompt := st.chat_input(f"Message {USERS[selected_user]['icon']} {selected_us
     # Add user message to current user's chat history
     st.session_state.chat_history.append({"role": "user", "content": prompt})
 
-    # Display assistant response in chat message container
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        # Since we're using asyncio, we need to run it in a coroutine
-        response = asyncio.run(st.session_state.chats[selected_user](prompt))
-        message_placeholder.markdown(response)
+    # Function to handle streaming response
+    async def generate_response():
+        response_text = ""
+        # Display assistant message container
+        with st.chat_message("assistant"):
+            message_placeholder = st.empty()
+            # Stream the response
+            async for token in st.session_state.chats[selected_user].stream_response(prompt):
+                response_text += token
+                message_placeholder.markdown(response_text + "▌")
+                await asyncio.sleep(0.01)  # Small sleep to allow UI to update
+            message_placeholder.markdown(response_text)
 
-    # Add assistant response to current user's chat history
-    st.session_state.chat_history.append({"role": "assistant", "content": response})
+        # Add assistant response to chat history
+        st.session_state.chat_history.append({"role": "assistant", "content": response_text})
+
+    # Run the async function to get and display the streaming response
+    asyncio.run(generate_response())
