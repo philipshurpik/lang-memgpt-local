@@ -3,7 +3,7 @@ import uuid
 
 from dotenv import load_dotenv
 
-from lang_memgpt_local.chat import Chat
+from memory_langgraph.chat import Chat
 
 load_dotenv()
 
