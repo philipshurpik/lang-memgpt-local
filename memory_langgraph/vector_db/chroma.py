@@ -1,6 +1,8 @@
-import chromadb
 from typing import List, Dict, Any
-from memory_langgraph.vector_db.interface import VectorDBInterface
+
+import chromadb
+
+from .interface import VectorDBInterface
 
 
 class ChromaAdapter(VectorDBInterface):

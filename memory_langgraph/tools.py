@@ -13,8 +13,8 @@ from langchain_core.tools import tool
 from langchain_openai import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
-from memory_langgraph.app_ctx import ctx, Constants
 
+from .app_ctx import ctx, Constants
 
 load_dotenv()
 logger = logging.getLogger("memory")

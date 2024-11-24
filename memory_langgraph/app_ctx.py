@@ -1,15 +1,17 @@
-import os
 import logging
+import os
 from functools import lru_cache
 from importlib import import_module
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional
 
 import tiktoken
 from dotenv import load_dotenv
 from langchain import hub
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.messages import AnyMessage
 from langchain_core.runnables.config import RunnableConfig
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langgraph.graph import add_messages
+from typing_extensions import Annotated, TypedDict
 
 load_dotenv()
 
@@ -42,9 +44,9 @@ class GraphConfig(TypedDict):
 
 
 class State(TypedDict):
-    messages: List[AnyMessage]
+    messages: Annotated[List[AnyMessage], add_messages]
     """The messages in the conversation."""
-    core_memories: Dict[str, str]
+    core_memories: List[str]
     """The core memories associated with the user."""
     recall_memories: List[str]
     """The recall memories retrieved for the current context."""

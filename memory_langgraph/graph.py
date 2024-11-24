@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime, timezone
-from typing_extensions import Literal
 
 from dotenv import load_dotenv
 from langchain_core.messages.utils import get_buffer_string
@@ -8,16 +7,10 @@ from langchain_core.runnables.config import RunnableConfig, get_executor_for_con
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
+from typing_extensions import Literal
 
 from .app_ctx import ctx, State, GraphConfig
-from memory_langgraph.tools import (
-    ask_wisdom,
-    fetch_core_memories,
-    save_recall_memory,
-    search_memory,
-    search_tool,
-    store_core_memory,
-)
+from .tools import ask_wisdom, fetch_core_memories, save_recall_memory, search_memory, search_tool, store_core_memory
 
 load_dotenv()
 logger = logging.getLogger("memory")
@@ -33,7 +26,8 @@ async def agent_llm(state: State, config: RunnableConfig) -> State:
     llm = ctx.agent_model.bind_tools(all_tools, tool_choice="auto")
     bound = ctx.prompts["agent"] | llm
 
-    core_str = "<core_memory>\n" + "\n".join([f"{k}: {v}" for k, v in state["core_memories"].items()]) + "\n</core_memory>"
+    core_str = "<core_memory>\n" + "\n".join(
+        [f"{k}: {v}" for k, v in state["core_memories"].items()]) + "\n</core_memory>"
     recall_str = "<recall_memory>\n" + "\n".join(state["recall_memories"]) + "\n</recall_memory>"
     logger.debug(f"Core memories: {core_str}")
     logger.debug(f"Recall memories: {recall_str}")

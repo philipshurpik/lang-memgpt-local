@@ -1,7 +1,8 @@
 import logging
 
-from memory_langgraph.graph import memgraph
 from langchain_core.messages import HumanMessage
+
+from .graph import memgraph
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
