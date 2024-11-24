@@ -9,15 +9,16 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 from typing_extensions import Literal
 
-from .app_ctx import ctx, State, GraphConfig
-from .tools import ask_wisdom, fetch_core_memories, save_recall_memory, search_memory, search_tool, store_core_memory
+from memory_langgraph.app_ctx import ctx, State, GraphConfig
+from memory_langgraph.tools import ask_wisdom, load_core_memories, save_recall_memory, search_recall_memory, search_tavily, \
+    save_core_memories
 
 load_dotenv()
 logger = logging.getLogger("memory")
 logger.setLevel(logging.DEBUG)
 
-memory_tools = [save_recall_memory, store_core_memory]
-utility_tools = [search_tool, search_memory, ask_wisdom]
+memory_tools = [save_recall_memory, save_core_memories]
+utility_tools = [search_tavily, search_recall_memory, ask_wisdom]
 all_tools = memory_tools + utility_tools
 
 
@@ -78,8 +79,8 @@ def load_memories(state: State, config: RunnableConfig) -> State:
 
     with get_executor_for_config(config) as executor:
         futures = [
-            executor.submit(fetch_core_memories, user_id),
-            executor.submit(search_memory.invoke, convo_str),
+            executor.submit(load_core_memories, user_id),
+            executor.submit(search_recall_memory.invoke, convo_str),
         ]
         _, core_memories = futures[0].result()
         recall_memories = futures[1].result()
