@@ -1,6 +1,5 @@
 import logging
 
-from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
@@ -11,7 +10,6 @@ from memory_langgraph.nodes import agent_llm, response_llm, load_memories
 from memory_langgraph.tools import ask_wisdom, save_recall_memory, search_recall_memory, search_tavily, \
     save_core_memories
 
-load_dotenv()
 logger = logging.getLogger("memory")
 logger.setLevel(logging.DEBUG)
 

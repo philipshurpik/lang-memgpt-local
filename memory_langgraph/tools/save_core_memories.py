@@ -25,9 +25,8 @@ def save_core_memories(key: str, value: str) -> str:
 
     existing_memories[key] = value
 
-    db_adapter = ctx.get_vectordb_client()
-    db_adapter.upsert(
-        "core_memories",
+    ctx.vectordb_client.upsert(
+        ctx.settings.core_collection,
         [path],
         [{
             Constants.PAYLOAD_KEY: json.dumps({"memories": existing_memories}),

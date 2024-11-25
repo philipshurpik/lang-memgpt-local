@@ -21,8 +21,7 @@ def load_core_memories(user_id: str) -> Tuple[str, Dict[str, str]]:
         Tuple[str, Dict[str, str]]: The path and dictionary of core memories.
     """
     path = Constants.PATCH_PATH.format(user_id=user_id)
-    db_adapter = ctx.get_vectordb_client()
-    collection = db_adapter.get_collection("core_memories")
+    collection = ctx.vectordb_client.get_collection(ctx.settings.core_collection)
     results = collection.get(ids=[path], include=["metadatas"])
 
     memories = {}

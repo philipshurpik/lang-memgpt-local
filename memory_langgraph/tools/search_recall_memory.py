@@ -24,8 +24,7 @@ def search_recall_memory(query: str, top_k: int = 5) -> List[str]:
     try:
         config = ensure_config()
         configurable = ctx.ensure_configurable(config)
-        embeddings = ctx.get_embeddings()
-        vector = embeddings.embed_query(query)
+        vector = ctx.qdrant_memory_embeddings.embed_query(query)
 
         where_clause = {
             "$and": [
@@ -34,8 +33,7 @@ def search_recall_memory(query: str, top_k: int = 5) -> List[str]:
             ]
         }
 
-        db_adapter = ctx.get_vectordb_client()
-        results = db_adapter.query_memories(vector, where_clause, top_k)
+        results = ctx.vectordb_client.query_memories(vector, where_clause, top_k)
         return [x[Constants.PAYLOAD_KEY] for x in results]
 
     except Exception as e:

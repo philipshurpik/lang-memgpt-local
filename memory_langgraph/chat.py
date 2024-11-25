@@ -1,11 +1,13 @@
 import logging
 
+from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 
 from .graph import memgraph
 
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("chat")
 logging.getLogger('langsmith.client').setLevel(logging.ERROR)
 
 

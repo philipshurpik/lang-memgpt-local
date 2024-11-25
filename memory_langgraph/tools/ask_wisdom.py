@@ -1,10 +1,8 @@
 import logging
-import os
 
 from langchain_core.tools import tool
-from langchain_openai import OpenAIEmbeddings
-from langchain_qdrant import QdrantVectorStore
-from qdrant_client import QdrantClient
+
+from ..app_ctx import ctx
 
 logger = logging.getLogger("tools")
 logger.setLevel(logging.INFO)
@@ -21,15 +19,7 @@ def ask_wisdom(query: str) -> str:
         str: Search results.
     """
     try:
-        qdrant_vectorstore = QdrantVectorStore(
-            client=QdrantClient(
-                url=os.getenv("QDRANT_URL"),
-                api_key=os.getenv("QDRANT_API_KEY")
-            ),
-            collection_name=os.getenv("QDRANT_COLLECTION"),
-            embedding=OpenAIEmbeddings(),
-        )
-        results = qdrant_vectorstore.similarity_search(query, k=5)
+        results = ctx.qdrant_vectorstore.similarity_search(query, k=5)
         formatted_results = "\n\n".join([doc.page_content.strip() for doc in results])
         return formatted_results
 

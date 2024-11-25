@@ -1,11 +1,7 @@
 import asyncio
 import uuid
 
-from dotenv import load_dotenv
-
 from memory_langgraph.chat import Chat
-
-load_dotenv()
 
 
 async def main():

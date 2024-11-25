@@ -14,9 +14,8 @@ def load_memories(state: State, config: RunnableConfig) -> State:
     """Load core and recall memories for the current conversation."""
     configurable = ctx.ensure_configurable(config)
     user_id = configurable["user_id"]
-    tokenizer = ctx.get_tokenizer()
     convo_str = get_buffer_string(state["messages"])
-    convo_str = tokenizer.decode(tokenizer.encode(convo_str)[:2048])
+    convo_str = ctx.tokenizer.decode(ctx.tokenizer.encode(convo_str)[:2048])
 
     with get_executor_for_config(config) as executor:
         core_memories_future = executor.submit(load_core_memories, user_id)

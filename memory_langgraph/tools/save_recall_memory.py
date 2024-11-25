@@ -19,8 +19,7 @@ async def save_recall_memory(memory: str) -> str:
     """
     config = ensure_config()
     configurable = ctx.ensure_configurable(config)
-    embeddings = ctx.get_embeddings()
-    vector = await embeddings.aembed_query(memory)
+    vector = await ctx.qdrant_memory_embeddings.aembed_query(memory)
 
     current_time = datetime.now(tz=timezone.utc)
     event_id = str(uuid.uuid4())
@@ -37,6 +36,5 @@ async def save_recall_memory(memory: str) -> str:
         "user_id": configurable["user_id"],
     }
 
-    db_adapter = ctx.get_vectordb_client()
-    db_adapter.add_memory(event_id, vector, metadata, memory)
+    ctx.vectordb_client.add_memory(event_id, vector, metadata, memory)
     return memory

@@ -2,11 +2,8 @@ import asyncio
 import uuid
 
 import streamlit as st
-from dotenv import load_dotenv
 
 from memory_langgraph.chat import Chat
-
-load_dotenv()
 
 # Define available users
 USERS = {
