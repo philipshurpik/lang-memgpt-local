@@ -10,10 +10,10 @@ async def main():
 
     chat = Chat(user_id, thread_id)
 
-    response = await chat("Hello!  What's your name?")
+    response = await chat("When I was young, I had a dog named Spot. He was my favorite pup.")
     print("Bot:", response)
 
-    response = await chat("My name is Luna. I like to eat chocolate")
+    response = await chat("I like to eat chocolate")
     print("Bot:", response)
 
     response = await chat("What is the weather in Warsaw?")

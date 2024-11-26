@@ -9,24 +9,11 @@ from memory_langgraph.graph import memgraph
 
 @pytest.mark.asyncio
 async def test_patch_memory(mock_app_context):
-    user_id = "test_user_id"
-    thread_id = "test_thread_id"
+    config = GraphConfig(thread_id="test_thread_id", user_id="test_user_id")
     messages = [
         HumanMessage(content="When I was young, I had a dog named Spot. He was my favorite pup."),
     ]
-    config = GraphConfig(
-        thread_id=thread_id,
-        user_id=user_id,
-    )
-
-    output_state = await memgraph.ainvoke(
-        {
-            "messages": messages,
-        },
-        {
-            "configurable": config,
-        },
-    )
+    output_state = await memgraph.ainvoke({"messages": messages}, {"configurable": config})
 
     # Verify that the core memory adapter's upsert method was called
     assert mock_app_context.core_memory_adapter.upsert.call_count >= 1
@@ -54,30 +41,11 @@ async def test_patch_memory(mock_app_context):
 
 @pytest.mark.asyncio
 async def test_insert_recall_memory(mock_app_context):
-    user_id = "test_user_id"
-    thread_id = "test_thread_id"
-
+    config = GraphConfig(thread_id="test_thread_id", user_id="test_user_id")
     messages = [
-        HumanMessage(content="I went to the beach with my friends today."),
-        AIMessage(content="That sounds like a fun day."),
-        HumanMessage(content="You speak the truth."),
+        HumanMessage(content="I went to the beach with my friends today.")
     ]
-
-    # Prepare config
-    config = GraphConfig(
-        thread_id=thread_id,
-        user_id=user_id,
-    )
-
-    # Execute the graph
-    output_state = await memgraph.ainvoke(
-        {
-            "messages": messages,
-        },
-        {
-            "configurable": config,
-        },
-    )
+    output_state = await memgraph.ainvoke({"messages": messages}, {"configurable": config})
 
     # Verify that recall memory adapter's save_memory method was called
     assert mock_app_context.recall_memory_adapter.save_memory.call_count >= 1

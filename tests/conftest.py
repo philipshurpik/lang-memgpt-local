@@ -2,7 +2,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, ToolCall
 
 from memory_langgraph.app_ctx import ctx, Constants
 
@@ -30,13 +30,11 @@ def mock_app_context():
 
         # Mock the return value of collection.get()
         mock_collection.get.return_value = {
-            'metadatas': [
-                {
-                    ctx.constants.PAYLOAD_KEY: json.dumps({
-                        "memories": {"existing_memory": "I am afraid of spiders."}
-                    })
-                }
-            ]
+            'metadatas': [{
+                ctx.constants.PAYLOAD_KEY: json.dumps({
+                    "memories": {"phobia": "afraid of spiders"}
+                }),
+            }]
         }
 
         # Mock upsert method
@@ -45,11 +43,9 @@ def mock_app_context():
         # Mock recall_memory_adapter
         ctx.recall_memory_adapter = MagicMock()
         ctx.recall_memory_adapter.save_memory.return_value = None
-        ctx.recall_memory_adapter.query_memories.return_value = [
-            {
-                ctx.constants.PAYLOAD_KEY: "I went to the beach with my friends last summer."
-            }
-        ]
+        ctx.recall_memory_adapter.query_memories.return_value = [{
+            ctx.constants.PAYLOAD_KEY: "I went to the beach with my friends last summer."
+        }]
 
         # Mock embeddings
         ctx.qdrant_memory_embeddings = MagicMock()
@@ -63,33 +59,26 @@ def mock_app_context():
         class MockAgentBound:
             async def ainvoke(self, input_dict):
                 last_user_message = input_dict["messages"][-1].content
-                if "Spot" in last_user_message:
-                    response_content = json.dumps({
-                        "tool_calls": [
-                            {
-                                "tool": "save_core_memories",
-                                "input": "favorite_pet|When I was young, I had a dog named Spot."
-                            }
-                        ],
-                        "response": ""
-                    })
-                elif "beach" in last_user_message:
-                    response_content = json.dumps({
-                        "tool_calls": [
-                            {
-                                "tool": "save_recall_memory",
-                                "input": "I went to the beach with my friends today."
-                            }
-                        ],
-                        "response": ""
-                    })
+                if "Spot" in last_user_message:  # core memory tool call
+                    tool_calls = [ToolCall(
+                        name="save_core_memories",
+                        args={'key': 'favorite_pet', 'value': 'dog named Spot'},
+                        id="tool_call_123"  # Unique identifier for the tool call
+                    )]
+                elif "beach" in last_user_message:  # recall memory tool call
+                    tool_calls = [ToolCall(
+                        name="save_recall_memory",
+                        args={
+                            "input": "I went to the beach with my friends today."
+                        },
+                        id="tool_call_123"  # Unique identifier for the tool call
+                    )]
                 else:
-                    response_content = json.dumps({
-                        "tool_calls": [],
-                        "response": "Tell me more!"
-                    })
-                new_message = AIMessage(content=response_content)
-                return input_dict["messages"] + [new_message]
+                    tool_calls = []
+                return AIMessage(
+                    content="Tell me more!" if len(tool_calls) == 0 else "",
+                    tool_calls=tool_calls
+                )
 
         # Create a mocked bound object for response_llm
         class MockResponseBound:
