@@ -6,9 +6,9 @@ from .interface import VectorDBInterface
 
 
 class ChromaAdapter(VectorDBInterface):
-    def __init__(self, persist_directory: str = "./vectordb", memory_collection="memories"):
+    def __init__(self, persist_directory: str = "./vectordb", collection_name="memories"):
         self.client = chromadb.PersistentClient(path=persist_directory)
-        self.memory_collection = memory_collection
+        self.collection_name = collection_name
         self.collections = {}
 
     def get_or_create_collection(self, name: str):
@@ -17,11 +17,11 @@ class ChromaAdapter(VectorDBInterface):
         return self.collections[name]
 
     def add_memory(self, id: str, vector: List[float], metadata: Dict[str, Any], content: str):
-        collection = self.get_or_create_collection(self.memory_collection)
+        collection = self.get_or_create_collection(self.collection_name)
         collection.add(ids=[id], embeddings=[vector], metadatas=[metadata], documents=[content])
 
     def query_memories(self, vector: List[float], where: Dict[str, Any], n_results: int) -> List[Dict[str, Any]]:
-        collection = self.get_or_create_collection(self.memory_collection)
+        collection = self.get_or_create_collection(self.collection_name)
         results = collection.query(query_embeddings=[vector], where=where, n_results=n_results)
         return results['metadatas'][0] if results['metadatas'] else []
 

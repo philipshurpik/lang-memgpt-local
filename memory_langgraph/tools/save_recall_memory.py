@@ -36,5 +36,5 @@ async def save_recall_memory(memory: str) -> str:
         "user_id": configurable["user_id"],
     }
 
-    ctx.vectordb_client.add_memory(event_id, vector, metadata, memory)
+    ctx.recall_memory_adapter.add_memory(event_id, vector, metadata, memory)
     return memory

@@ -25,7 +25,7 @@ def save_core_memories(key: str, value: str) -> str:
 
     existing_memories[key] = value
 
-    ctx.vectordb_client.upsert(
+    ctx.core_memory_adapter.upsert(
         ctx.settings.core_collection,
         [path],
         [{

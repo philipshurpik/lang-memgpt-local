@@ -3,21 +3,23 @@ import os
 from typing import List, Optional
 
 import tiktoken
-from langchain_qdrant import QdrantVectorStore
-from qdrant_client import QdrantClient
 from dotenv import load_dotenv
 from langchain import hub
 from langchain_core.messages import AnyMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_qdrant import QdrantVectorStore
 from langgraph.graph import add_messages
+from qdrant_client import QdrantClient
 from typing_extensions import Annotated, TypedDict
-from .vector_db.chroma import ChromaAdapter
+
+from .vector_db import ChromaAdapter, QdrantAdapter
 
 load_dotenv()
 
 logger = logging.getLogger("app_ctx")
 logger.setLevel(logging.DEBUG)
+
 
 class Constants:
     PAYLOAD_KEY = "content"
@@ -55,7 +57,6 @@ class State(TypedDict):
     final_response: Optional[str]  # Response from the final LLM.
 
 
-# AppCtx class
 class AppCtx:
     def __init__(self):
         self.settings = Settings()
@@ -72,7 +73,11 @@ class AppCtx:
             embedding=self.qdrant_wisdom_embeddings,
         )
         self.qdrant_memory_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-
+        self.recall_memory_adapter = QdrantAdapter(
+            client=self.qdrant_client,
+            collection_name=self.settings.recall_collection
+        )
+        self.core_memory_adapter = ChromaAdapter(collection_name=self.settings.core_collection)
         self.prompts = {
             "agent": hub.pull("langgraph-agent"),
             "response": hub.pull("langgraph-response"),
@@ -91,7 +96,6 @@ class AppCtx:
             frequency_penalty=self.settings.response_model_penalty,
             presence_penalty=self.settings.response_model_penalty,
         )
-        self.vectordb_client = ChromaAdapter(memory_collection=self.settings.recall_collection)
         self.tokenizer = tiktoken.encoding_for_model(self.settings.agent_model_name)
 
     @staticmethod

@@ -33,7 +33,7 @@ def search_recall_memory(query: str, top_k: int = 5) -> List[str]:
             ]
         }
 
-        results = ctx.vectordb_client.query_memories(vector, where_clause, top_k)
+        results = ctx.recall_memory_adapter.query_memories(vector, where_clause, top_k)
         return [x[Constants.PAYLOAD_KEY] for x in results]
 
     except Exception as e:
