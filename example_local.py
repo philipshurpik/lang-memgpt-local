@@ -13,6 +13,9 @@ async def main():
     response = await chat("When I was young, I had a dog named Spot. He was my favorite pup.")
     print("Bot:", response)
 
+    response = await chat("I went to the beach with my friends today.")
+    print("Bot:", response)
+
     response = await chat("I like to eat chocolate")
     print("Bot:", response)
 

@@ -84,7 +84,7 @@ class AppCtx:
         }
         self.agent_model = ChatOpenAI(
             model_name=self.settings.agent_model_name,
-            temperature=0.7,
+            temperature=0,
             streaming=True
         )
         self.response_model = ChatOpenAI(

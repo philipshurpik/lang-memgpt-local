@@ -1,5 +1,5 @@
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, ToolCall
@@ -42,15 +42,15 @@ def mock_app_context():
 
         # Mock recall_memory_adapter
         ctx.recall_memory_adapter = MagicMock()
-        ctx.recall_memory_adapter.save_memory.return_value = None
+        ctx.recall_memory_adapter.add_memory.return_value = None
         ctx.recall_memory_adapter.query_memories.return_value = [{
-            ctx.constants.PAYLOAD_KEY: "I went to the beach with my friends last summer."
+            ctx.constants.PAYLOAD_KEY: "I like to swim."
         }]
 
         # Mock embeddings
         ctx.qdrant_memory_embeddings = MagicMock()
         ctx.qdrant_memory_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
-        ctx.qdrant_memory_embeddings.aembed_query.return_value = [0.1, 0.2, 0.3]
+        ctx.qdrant_memory_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
 
         # Mock prompts
         ctx.prompts = {}
@@ -68,9 +68,7 @@ def mock_app_context():
                 elif "beach" in last_user_message:  # recall memory tool call
                     tool_calls = [ToolCall(
                         name="save_recall_memory",
-                        args={
-                            "input": "I went to the beach with my friends today."
-                        },
+                        args={"memory": "I went to the beach with my friends today."},
                         id="tool_call_123"  # Unique identifier for the tool call
                     )]
                 else:
