@@ -7,6 +7,46 @@ from langchain_core.messages import AIMessage, ToolCall
 from memory_langgraph.app_ctx import ctx, Constants
 
 
+class MockAgentChain:
+    async def ainvoke(self, input_dict):
+        last_user_message = input_dict["messages"][-1].content
+        if "Spot" in last_user_message:  # core memory tool call
+            tool_calls = [ToolCall(
+                name="save_core_memories",
+                args={'key': 'favorite_pet', 'value': 'dog named Spot'},
+                id="tool_call_123"  # Unique identifier for the tool call
+            )]
+        elif "beach" in last_user_message:  # recall memory tool call
+            tool_calls = [ToolCall(
+                name="save_recall_memory",
+                args={"memory": "I went to the beach with my friends today."},
+                id="tool_call_123"  # Unique identifier for the tool call
+            )]
+        else:
+            tool_calls = []
+        return AIMessage(
+            content="Tell me more!" if len(tool_calls) == 0 else "",
+            tool_calls=tool_calls
+        )
+
+
+class MockResponseChain:
+    async def ainvoke(self, input_dict):
+        # Return an AIMessage with content
+        return AIMessage(content="This is a mocked final response.")
+
+
+class MockAgentPrompt:
+    # Mock the '|' operator to return the appropriate chain object
+    def __or__(self, other):
+        return MockAgentChain()
+
+
+class MockResponsePrompt:
+    def __or__(self, other):
+        return MockResponseChain()
+
+
 @pytest.fixture(scope="function")
 def mock_app_context():
     with patch('memory_langgraph.app_ctx.AppCtx.__init__', return_value=None):
@@ -53,61 +93,13 @@ def mock_app_context():
         ctx.qdrant_memory_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
 
         # Mock prompts
-        ctx.prompts = {}
-
-        # Create a mocked bound object for agent_llm
-        class MockAgentBound:
-            async def ainvoke(self, input_dict):
-                last_user_message = input_dict["messages"][-1].content
-                if "Spot" in last_user_message:  # core memory tool call
-                    tool_calls = [ToolCall(
-                        name="save_core_memories",
-                        args={'key': 'favorite_pet', 'value': 'dog named Spot'},
-                        id="tool_call_123"  # Unique identifier for the tool call
-                    )]
-                elif "beach" in last_user_message:  # recall memory tool call
-                    tool_calls = [ToolCall(
-                        name="save_recall_memory",
-                        args={"memory": "I went to the beach with my friends today."},
-                        id="tool_call_123"  # Unique identifier for the tool call
-                    )]
-                else:
-                    tool_calls = []
-                return AIMessage(
-                    content="Tell me more!" if len(tool_calls) == 0 else "",
-                    tool_calls=tool_calls
-                )
-
-        # Create a mocked bound object for response_llm
-        class MockResponseBound:
-            async def ainvoke(self, input_dict):
-                # Return an AIMessage with content
-                return AIMessage(content="This is a mocked final response.")
-
-        # Mock the '|' operator to return the appropriate bound object
-        class MockAgentPrompt:
-            def __or__(self, other):
-                return MockAgentBound()
-
-        class MockResponsePrompt:
-            def __or__(self, other):
-                return MockResponseBound()
-
-        ctx.prompts["agent"] = MockAgentPrompt()
-        ctx.prompts["response"] = MockResponsePrompt()
-
-        # Mock agent_model's bind_tools
-        ctx.agent_model = MagicMock()
-        ctx.agent_model.bind_tools.return_value = MagicMock()
-
-        # Mock response_model (not used directly due to the prompt mock)
-        ctx.response_model = MagicMock()
+        ctx.agent_prompt = MockAgentPrompt()
+        ctx.response_prompt = MockResponsePrompt()
 
         # Mock tokenizer
         ctx.tokenizer = MagicMock()
         ctx.tokenizer.encode = lambda x: x.split()  # Simple tokenizer mock
         ctx.tokenizer.decode = lambda x: ' '.join(x)
-
         yield ctx
 
 

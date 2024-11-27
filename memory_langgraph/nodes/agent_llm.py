@@ -11,10 +11,10 @@ logger.setLevel(logging.DEBUG)
 all_tools = [ask_wisdom, save_core_memories, save_recall_memory, search_recall_memory, search_tavily]
 
 
-async def agent_llm(state: State, config: RunnableConfig) -> State:
+async def agent_llm(state: State) -> State:
     """Process the current state and generate a response using the LLM."""
     llm = ctx.agent_model.bind_tools(all_tools, tool_choice="auto")
-    bound = ctx.prompts["agent"] | llm
+    chain = ctx.agent_prompt | llm
 
     core_str = "<core_memory>\n" + "\n".join(
         [f"{k}: {v}" for k, v in state["core_memories"].items()]) + "\n</core_memory>"
@@ -22,7 +22,7 @@ async def agent_llm(state: State, config: RunnableConfig) -> State:
     logger.debug(f"Core memories: {core_str}")
     logger.debug(f"Recall memories: {recall_str}")
 
-    response = await bound.ainvoke({
+    response = await chain.ainvoke({
         "messages": state["messages"],
         "core_memories": core_str,
         "recall_memories": recall_str,

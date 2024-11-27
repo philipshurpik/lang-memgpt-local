@@ -78,15 +78,13 @@ class AppCtx:
             collection_name=self.settings.recall_collection
         )
         self.core_memory_adapter = ChromaAdapter(collection_name=self.settings.core_collection)
-        self.prompts = {
-            "agent": hub.pull("langgraph-agent"),
-            "response": hub.pull("langgraph-response"),
-        }
+        self.agent_prompt = hub.pull("langgraph-agent")
         self.agent_model = ChatOpenAI(
             model_name=self.settings.agent_model_name,
             temperature=0,
             streaming=True
         )
+        self.response_prompt = hub.pull("langgraph-response")
         self.response_model = ChatOpenAI(
             model_name=self.settings.response_model_name,
             temperature=self.settings.response_model_temperature,
