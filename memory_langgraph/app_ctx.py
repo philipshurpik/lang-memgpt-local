@@ -6,6 +6,7 @@ import tiktoken
 from dotenv import load_dotenv
 from langchain import hub
 from langchain_core.messages import AnyMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
@@ -51,10 +52,11 @@ class GraphConfig(TypedDict):
 
 
 class State(TypedDict):
-    messages: Annotated[List[AnyMessage], add_messages]  # The messages in the conversation.
+    messages: Annotated[List[BaseMessage], add_messages]  # The messages in the conversation.
     core_memories: List[str]  # The core memories associated with the user.
     recall_memories: List[str]  # The recall memories retrieved for the current context.
     final_response: Optional[str]  # Response from the final LLM.
+    to_summarize: List[BaseMessage]  # New field for tracking messages to summarize
 
 
 class AppCtx:

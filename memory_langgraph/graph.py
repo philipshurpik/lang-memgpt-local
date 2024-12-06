@@ -6,7 +6,7 @@ from langgraph.prebuilt import ToolNode
 from typing_extensions import Literal
 
 from memory_langgraph.app_ctx import State, GraphConfig
-from memory_langgraph.nodes import agent_llm, response_llm, load_memories
+from memory_langgraph.nodes import agent_llm, response_llm, load_memories, summarize_conversation
 from memory_langgraph.tools import ask_wisdom, save_recall_memory, search_recall_memory, search_tavily, \
     save_core_memories
 
@@ -24,18 +24,30 @@ def route_tools(state: State) -> Literal["tools", "response_llm"]:
     return "response_llm"
 
 
+def should_summarize(state: State) -> Literal["summarize", "end"]:
+    """Route to summarize or end based on message count."""
+    messages = state["messages"]
+    if len(messages) >= 10:
+        # Store all but last 2 messages for summarization
+        state["to_summarize"] = messages[:-2]
+        return "summarize"
+    return "end"
+
+
 builder = StateGraph(State, GraphConfig)
 builder.add_node("load_memories", load_memories)
 builder.add_node("agent_llm", agent_llm)
 builder.add_node("tools", ToolNode(all_tools))
 builder.add_node("response_llm", response_llm)
+builder.add_node("summarize", summarize_conversation)
 
 # Add edges to the graph
 builder.add_edge(START, "load_memories")
 builder.add_edge("load_memories", "agent_llm")
 builder.add_conditional_edges("agent_llm", route_tools, ["tools", "response_llm"])
 builder.add_edge("tools", "response_llm")
-builder.add_edge("response_llm", END)
+builder.add_conditional_edges("response_llm", should_summarize, {"summarize": "summarize", "end": END})
+builder.add_edge("summarize", END)
 
 # Compile the graph into an executable LangGraph
 memory = MemorySaver()
