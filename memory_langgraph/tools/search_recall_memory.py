@@ -4,7 +4,7 @@ from typing import List
 from langchain_core.runnables.config import ensure_config
 from langchain_core.tools import tool
 
-from ..app_ctx import ctx, Constants
+from ..app_ctx import Constants, ctx
 
 logger = logging.getLogger("tools")
 logger.setLevel(logging.INFO)

@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage
 
 from memory_langgraph.app_ctx import GraphConfig, ctx
 from memory_langgraph.graph import memgraph
@@ -13,7 +13,7 @@ async def test_core_memory(mock_app_context):
     messages = [
         HumanMessage(content="When I was young, I had a dog named Spot. He was my favorite pup."),
     ]
-    output_state = await memgraph.ainvoke({"messages": messages}, {"configurable": config})
+    _ = await memgraph.ainvoke({"messages": messages}, {"configurable": config})
 
     # Verify that the core memory adapter's upsert method was called
     assert mock_app_context.core_memory_adapter.upsert.call_count >= 1

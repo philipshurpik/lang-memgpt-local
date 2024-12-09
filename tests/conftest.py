@@ -1,10 +1,10 @@
 import json
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
-from memory_langgraph.app_ctx import ctx, Constants
+from memory_langgraph.app_ctx import Constants, ctx
 
 
 class MockAgentChain:

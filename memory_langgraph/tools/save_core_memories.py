@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from langchain_core.runnables.config import ensure_config
 from langchain_core.tools import tool
 
+from ..app_ctx import Constants, ctx
 from .load_core_memories import load_core_memories
-from ..app_ctx import ctx, Constants
 
 
 @tool

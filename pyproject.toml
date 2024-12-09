@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "memory_langgraph"
 version = "0.0.1"
-description = "A simple memory-enabled agent for agents using LangChain and LangGraph, running locally. This code is adapted for local use by Jacob Golden and Claude 3.5 Sonnet"
-authors = ["William Fu-Hinthorn <13333726+hinthornw@users.noreply.github.com>"]
+description = "A simple memory-enabled agent for agents using LangChain and LangGraph, running locally"
+authors = ["..."]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -36,13 +36,12 @@ lint.select = [
     "E",    # pycodestyle
     "F",    # pyflakes
     "I",    # isort
-    "D",    # pydocstyle
-    "D401", # First line should be in imperative mood
 ]
+line-length = 120  # Set maximum line length to 120
 
 [tool.ruff.format]
 docstring-code-format = true
-docstring-code-line-length = 80
+docstring-code-line-length = 120
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "E501"]

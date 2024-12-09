@@ -11,7 +11,7 @@ async def test_insert_recall_memory(mock_app_context):
     messages = [
         HumanMessage(content="I went to the beach with my friends today.")
     ]
-    output_state = await memgraph.ainvoke({"messages": messages}, {"configurable": config})
+    _ = await memgraph.ainvoke({"messages": messages}, {"configurable": config})
 
     # Verify that recall memory adapter's add_memory method was called
     assert mock_app_context.recall_memory_adapter.add_memory.call_count >= 1

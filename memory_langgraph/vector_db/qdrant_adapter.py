@@ -1,7 +1,15 @@
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import PointStruct, Filter, FieldCondition, MatchValue, VectorParams, Distance
+from qdrant_client.http.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
+)
+
 from .interface import VectorDBInterface
 
 

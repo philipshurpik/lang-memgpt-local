@@ -5,7 +5,6 @@ from typing import List, Optional
 import tiktoken
 from dotenv import load_dotenv
 from langchain import hub
-from langchain_core.messages import AnyMessage
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings

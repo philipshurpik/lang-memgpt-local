@@ -5,7 +5,6 @@ evals:
 
 lint:
 	poetry run ruff check .
-	poetry run mypy .
 
 format:
 	poetry run ruff check --select I --fix

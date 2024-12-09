@@ -3,7 +3,7 @@ import logging
 from langchain_core.messages.utils import get_buffer_string
 from langchain_core.runnables.config import RunnableConfig, get_executor_for_config
 
-from ..app_ctx import ctx, State
+from ..app_ctx import State, ctx
 from ..tools import load_core_memories, search_recall_memory
 
 logger = logging.getLogger("memory")

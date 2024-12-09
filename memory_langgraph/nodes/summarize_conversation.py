@@ -1,8 +1,9 @@
 import logging
 from typing import List
-from langchain_core.messages import BaseMessage, SystemMessage, RemoveMessage
-from langchain_core.messages.utils import get_buffer_string
-from ..app_ctx import ctx, State
+
+from langchain_core.messages import BaseMessage, RemoveMessage, SystemMessage
+
+from ..app_ctx import State, ctx
 
 logger = logging.getLogger("summarize")
 
@@ -15,7 +16,8 @@ async def summarize_conversation(state: State) -> State:
         return state
         
     summary_messages = [
-        SystemMessage(content="Create a concise summary of this conversation segment that captures key points and context."),
+        SystemMessage(content="Create a concise summary of this conversation segment "
+                              "that captures key points and context."),
         *messages_to_summarize
     ]
     

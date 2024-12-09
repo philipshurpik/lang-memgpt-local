@@ -1,9 +1,8 @@
 from datetime import datetime, timezone
 
 from langchain_core.messages.ai import AIMessage
-from langchain_core.runnables.config import RunnableConfig
 
-from ..app_ctx import ctx, State
+from ..app_ctx import State, ctx
 
 
 async def response_llm(state: State) -> State:
