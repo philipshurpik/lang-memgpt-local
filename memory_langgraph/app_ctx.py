@@ -4,7 +4,6 @@ from typing import List, Optional
 
 import tiktoken
 from dotenv import load_dotenv
-from langchain import hub
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -13,6 +12,7 @@ from langgraph.graph import add_messages
 from qdrant_client import QdrantClient
 from typing_extensions import Annotated, TypedDict
 
+from .prompts import agent_llm_prompt, get_prompt_template, response_llm_prompt
 from .vector_db import ChromaAdapter, QdrantAdapter
 
 load_dotenv()
@@ -37,6 +37,7 @@ class Settings:
         self.response_model_name: str = os.environ.get('OPENAI_RESPONSE_MODEL', "gpt-4o")
         self.response_model_penalty: float = float(os.environ.get('RESPONSE_PENALTY', 0.0))
         self.response_model_temperature: float = float(os.environ.get('RESPONSE_TEMPERATURE', 1.0))
+        self.qdrant_embeddings_model = os.environ.get('QDRANT_EMBEDDINGS', "text-embedding-3-small")
         self.qdrant_url: str = os.getenv("QDRANT_URL")
         self.qdrant_api_key: str = os.getenv("QDRANT_API_KEY")
         self.qdrant_wisdom_collection: str = os.getenv("QDRANT_WISDOM_COLLECTION")
@@ -67,25 +68,24 @@ class AppCtx:
             url=self.settings.qdrant_url,
             api_key=self.settings.qdrant_api_key
         )
-        self.qdrant_wisdom_embeddings = OpenAIEmbeddings()
         self.qdrant_vectorstore = QdrantVectorStore(
             client=self.qdrant_client,
             collection_name=self.settings.qdrant_wisdom_collection,
-            embedding=self.qdrant_wisdom_embeddings,
+            embedding=OpenAIEmbeddings(),
         )
-        self.qdrant_memory_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        self.qdrant_memory_embeddings = OpenAIEmbeddings(model=self.settings.qdrant_embeddings_model)
         self.recall_memory_adapter = QdrantAdapter(
             client=self.qdrant_client,
             collection_name=self.settings.recall_collection
         )
         self.core_memory_adapter = ChromaAdapter(collection_name=self.settings.core_collection)
-        self.agent_prompt = hub.pull("langgraph-agent")
+        self.agent_prompt = get_prompt_template(agent_llm_prompt)
         self.agent_model = ChatOpenAI(
             model_name=self.settings.agent_model_name,
             temperature=0,
             streaming=True
         )
-        self.response_prompt = hub.pull("langgraph-response")
+        self.response_prompt = get_prompt_template(response_llm_prompt)
         self.response_model = ChatOpenAI(
             model_name=self.settings.response_model_name,
             temperature=self.settings.response_model_temperature,
