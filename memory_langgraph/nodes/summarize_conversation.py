@@ -31,6 +31,4 @@ async def summarize_conversation(state: State) -> State:
         "messages": delete_messages,
         "core_memories": state["core_memories"],
         "recall_memories": state["recall_memories"],
-        "final_response": state["final_response"],
-        "to_summarize": []  # Clear the to_summarize list
     }

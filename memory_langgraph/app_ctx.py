@@ -45,8 +45,6 @@ class State(TypedDict):
     messages: Annotated[List[BaseMessage], add_messages]  # The messages in the conversation.
     core_memories: List[str]  # The core memories associated with the user.
     recall_memories: List[str]  # The recall memories retrieved for the current context.
-    final_response: Optional[str]  # Response from the final LLM.
-    to_summarize: List[BaseMessage]  # New field for tracking messages to summarize
 
 
 class AppCtx:

@@ -30,6 +30,4 @@ async def load_memories(state: State, config: RunnableConfig) -> State:
         "messages": state["messages"],
         "core_memories": core_memories,
         "recall_memories": recall_memories,
-        "final_response": None,
-        "to_summarize": [],
     }

@@ -21,7 +21,6 @@ async def response_llm(state: State) -> State:
     })
     return {
         "messages": state_messages,
-        "final_response": response.content,
         "core_memories": state["core_memories"],
         "recall_memories": state["recall_memories"],
     }

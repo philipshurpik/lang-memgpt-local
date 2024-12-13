@@ -36,5 +36,4 @@ async def agent_llm(state: State) -> State:
         "messages": response,
         "core_memories": state["core_memories"],
         "recall_memories": state["recall_memories"],
-        "final_response": None,
     }
