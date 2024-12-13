@@ -1,5 +1,7 @@
 import logging
+from typing import List
 
+from langchain_core.documents import Document
 from langchain_core.tools import tool
 
 from ..app_ctx import ctx
@@ -9,7 +11,7 @@ logger.setLevel(logging.INFO)
 
 
 @tool
-def ask_wisdom(query: str) -> str:
+async def ask_wisdom(query: str) -> str:
     """Ask a question that can be answered using a knowledge base of human wisdom.
 
     Args:
@@ -19,7 +21,7 @@ def ask_wisdom(query: str) -> str:
         str: Search results.
     """
     try:
-        results = ctx.qdrant_vectorstore.similarity_search(query, k=5)
+        results: List[Document] = await ctx.qdrant_vectorstore.asimilarity_search(query, k=5)
         formatted_results = "\n\n".join([doc.page_content.strip() for doc in results])
         return formatted_results
 

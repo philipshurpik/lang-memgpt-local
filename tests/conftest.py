@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import AIMessage, ToolCall
 
-from memory_langgraph.app_ctx import Constants, ctx
+from memory_langgraph.app_ctx import ctx
 
 
 class MockAgentChain:
@@ -49,35 +49,34 @@ def mock_app_context():
     with patch('memory_langgraph.app_ctx.AppCtx.__init__', return_value=None):
         # Mock context attributes
         ctx.settings = MagicMock()
-        ctx.constants = Constants()
 
         # Mock core_memory_adapter
-        ctx.core_memory_adapter = MagicMock()
+        ctx.core_memory_adapter = AsyncMock()
         ctx.core_memory_adapter.save_memory = AsyncMock()
         ctx.core_memory_adapter.get_memories = AsyncMock(return_value={
             "phobia": "afraid of spiders"
         })
 
         # Mock recall_memory_adapter
-        ctx.recall_memory_adapter = MagicMock()
+        ctx.recall_memory_adapter = AsyncMock()
         ctx.recall_memory_adapter.add_memory = AsyncMock()
-        ctx.recall_memory_adapter.query_memories = AsyncMock(return_value=[{
-            "content": "I like to swim."
-        }])
+        ctx.recall_memory_adapter.query_memories = AsyncMock(return_value=[
+            {"content": "I like to swim.", "timestamp": "2024-01-01T00:00:00Z"}
+        ])
 
         # Mock embeddings
-        ctx.qdrant_memory_embeddings = MagicMock()
-        ctx.qdrant_memory_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
+        ctx.qdrant_memory_embeddings = AsyncMock()
         ctx.qdrant_memory_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
 
-        # Mock prompts
+        # Mock vector store
+        ctx.qdrant_vectorstore = AsyncMock()
+        ctx.qdrant_vectorstore.asimilarity_search = AsyncMock(return_value=[
+            MagicMock(page_content="Some wisdom content")
+        ])
+
+        # Mock prompts and chains
         ctx.agent_prompt = MockAgentPrompt()
         ctx.response_prompt = MockResponsePrompt()
-
-        # Mock tokenizer
-        ctx.tokenizer = MagicMock()
-        ctx.tokenizer.encode = lambda x: x.split()
-        ctx.tokenizer.decode = lambda x: ' '.join(x)
         yield ctx
 
 

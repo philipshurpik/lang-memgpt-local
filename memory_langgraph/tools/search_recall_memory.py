@@ -4,37 +4,34 @@ from typing import List
 from langchain_core.runnables.config import ensure_config
 from langchain_core.tools import tool
 
-from ..app_ctx import Constants, ctx
+from ..app_ctx import ctx
 
 logger = logging.getLogger("tools")
 logger.setLevel(logging.INFO)
 
 
 @tool
-def search_recall_memory(query: str, top_k: int = 5) -> List[str]:
-    """Search for memories in the database based on semantic similarity.
+async def search_recall_memory(query: str, top_k: int = 5) -> List[str]:
+    """Search for semantically similar memories.
 
     Args:
-        query (str): The search query.
-        top_k (int): The number of results to return.
+        query: The search query text.
+        top_k: Number of results to return (default: 5).
 
     Returns:
-        List[str]: A list of relevant memories.
+        List of relevant memory texts.
     """
     try:
         config = ensure_config()
-        configurable = ctx.ensure_configurable(config)
-        vector = ctx.qdrant_memory_embeddings.embed_query(query)
+        user_id = ctx.ensure_configurable(config)["user_id"]
+        vector = await ctx.qdrant_memory_embeddings.aembed_query(query)
 
-        where_clause = {
-            "$and": [
-                {"user_id": {"$eq": configurable["user_id"]}},
-                {Constants.TYPE_KEY: {"$eq": "recall"}}
-            ]
-        }
-
-        results = ctx.recall_memory_adapter.query_memories(vector, where_clause, top_k)
-        return [x[Constants.PAYLOAD_KEY] for x in results]
+        results = await ctx.recall_memory_adapter.query_memories(
+            vector=vector,
+            user_id=user_id,
+            n_results=top_k
+        )
+        return [result["content"] for result in results]
 
     except Exception as e:
         logger.error(f"Error in search_memory: {str(e)}")

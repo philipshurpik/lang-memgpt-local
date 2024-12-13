@@ -2,18 +2,17 @@ import logging
 import os
 from typing import List, Optional
 
-import tiktoken
 from dotenv import load_dotenv
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langgraph.graph import add_messages
-from qdrant_client import QdrantClient
+from qdrant_client import AsyncQdrantClient, QdrantClient
 from typing_extensions import Annotated, TypedDict
 
+from .db import MongoAdapter, QdrantAdapter
 from .prompts import agent_llm_prompt, get_prompt_template, response_llm_prompt
-from .vector_db import MongoAdapter, QdrantAdapter
 
 load_dotenv()
 
@@ -21,16 +20,6 @@ logger = logging.getLogger("app_ctx")
 logger.setLevel(logging.DEBUG)
 
 
-class Constants:
-    PAYLOAD_KEY = "content"
-    PATH_KEY = "path"
-    PATCH_PATH = "user/{user_id}/core"
-    INSERT_PATH = "user/{user_id}/recall/{event_id}"
-    TIMESTAMP_KEY = "timestamp"
-    TYPE_KEY = "type"
-
-
-# Settings
 class Settings:
     def __init__(self):
         self.agent_model_name: str = os.environ.get('OPENAI_AGENT_MODEL', "gpt-4o-mini")
@@ -47,7 +36,6 @@ class Settings:
         self.core_collection: str = os.getenv("CORE_MEMORY_COLLECTION", "core_memories")
 
 
-# Schemas
 class GraphConfig(TypedDict):
     thread_id: str  # The thread ID of the conversation.
     user_id: str  # The ID of the user to remember in the conversation.
@@ -64,20 +52,15 @@ class State(TypedDict):
 class AppCtx:
     def __init__(self):
         self.settings = Settings()
-        self.constants = Constants()
 
-        self.qdrant_client = QdrantClient(
-            url=self.settings.qdrant_url,
-            api_key=self.settings.qdrant_api_key
-        )
         self.qdrant_vectorstore = QdrantVectorStore(
-            client=self.qdrant_client,
+            client=QdrantClient(url=self.settings.qdrant_url, api_key=self.settings.qdrant_api_key),
             collection_name=self.settings.qdrant_wisdom_collection,
             embedding=OpenAIEmbeddings(),
         )
         self.qdrant_memory_embeddings = OpenAIEmbeddings(model=self.settings.qdrant_embeddings_model)
         self.recall_memory_adapter = QdrantAdapter(
-            client=self.qdrant_client,
+            client=AsyncQdrantClient(url=self.settings.qdrant_url, api_key=self.settings.qdrant_api_key),
             collection_name=self.settings.recall_collection
         )
         self.core_memory_adapter = MongoAdapter(
@@ -101,7 +84,6 @@ class AppCtx:
             frequency_penalty=self.settings.response_model_penalty,
             presence_penalty=self.settings.response_model_penalty,
         )
-        self.tokenizer = tiktoken.encoding_for_model(self.settings.agent_model_name)
 
     @staticmethod
     def ensure_configurable(config: RunnableConfig) -> GraphConfig:
