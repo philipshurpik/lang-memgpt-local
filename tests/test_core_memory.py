@@ -1,9 +1,7 @@
-import json
-
 import pytest
 from langchain_core.messages import HumanMessage
 
-from memory_langgraph.app_ctx import GraphConfig, ctx
+from memory_langgraph.app_ctx import GraphConfig
 from memory_langgraph.graph import memgraph
 
 
@@ -15,25 +13,18 @@ async def test_core_memory(mock_app_context):
     ]
     _ = await memgraph.ainvoke({"messages": messages}, {"configurable": config})
 
-    # Verify that the core memory adapter's upsert method was called
-    assert mock_app_context.core_memory_adapter.upsert.call_count >= 1
+    # Verify that the core memory adapter's save_memory method was called
+    assert mock_app_context.core_memory_adapter.save_memory.call_count >= 1
 
-    # Extract the memories that were attempted to be saved
-    upsert_calls = mock_app_context.core_memory_adapter.upsert.call_args_list
+    # Extract the saved memory details
+    save_calls = mock_app_context.core_memory_adapter.save_memory.call_args_list
     saved_memories = []
-    for call in upsert_calls:
-        args, kwargs = call
-        metadatas = args[2]
-        payload = metadatas[0][ctx.constants.PAYLOAD_KEY]
-        memories = json.loads(payload)["memories"]
-        saved_memories.append(memories)
+    for call in save_calls:
+        args = call[0]  # args are (user_id, key, value)
+        saved_memories.append((args[1], args[2]))  # (key, value) pairs
 
-    # Ensure that the new memory was saved
-    new_memory_saved = any("spot" in v.lower() for mem in saved_memories for v in mem.values())
-    assert new_memory_saved, "New memory about Spot should have been saved to core memories"
-
-    # Ensure existing memories are still accessible
-    existing_memory_preserved = any(
-        "spiders" in v.lower() for mem in saved_memories for v in mem.values()
+    # Ensure that the new memory about Spot was saved
+    spot_memory_saved = any(
+        "spot" in value.lower() for _, value in saved_memories
     )
-    assert existing_memory_preserved, "Existing memory about spiders should still be present"
+    assert spot_memory_saved, "New memory about Spot should have been saved"

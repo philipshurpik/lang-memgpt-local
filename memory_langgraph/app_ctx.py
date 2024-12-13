@@ -13,7 +13,7 @@ from qdrant_client import QdrantClient
 from typing_extensions import Annotated, TypedDict
 
 from .prompts import agent_llm_prompt, get_prompt_template, response_llm_prompt
-from .vector_db import ChromaAdapter, QdrantAdapter
+from .vector_db import MongoAdapter, QdrantAdapter
 
 load_dotenv()
 
@@ -42,7 +42,9 @@ class Settings:
         self.qdrant_api_key: str = os.getenv("QDRANT_API_KEY")
         self.qdrant_wisdom_collection: str = os.getenv("QDRANT_WISDOM_COLLECTION")
         self.recall_collection: str = os.getenv("QDRANT_MEMORY_COLLECTION", "memories")
-        self.core_collection: str = os.getenv("QDRANT_MEMORY_COLLECTION", "core_memories")
+        self.mongodb_url: str = os.getenv("MONGODB_URL")
+        self.mongodb_name: str = os.getenv("MONGODB_NAME")
+        self.core_collection: str = os.getenv("CORE_MEMORY_COLLECTION", "core_memories")
 
 
 # Schemas
@@ -78,7 +80,11 @@ class AppCtx:
             client=self.qdrant_client,
             collection_name=self.settings.recall_collection
         )
-        self.core_memory_adapter = ChromaAdapter(collection_name=self.settings.core_collection)
+        self.core_memory_adapter = MongoAdapter(
+            connection_url=self.settings.mongodb_url,
+            db_name=self.settings.mongodb_name,
+            core_collection=self.settings.core_collection
+        )
         self.agent_prompt = get_prompt_template(agent_llm_prompt)
         self.agent_model = ChatOpenAI(
             model_name=self.settings.agent_model_name,

@@ -1,40 +1,28 @@
-import json
-from datetime import datetime, timezone
-
-from langchain_core.runnables.config import ensure_config
 from langchain_core.tools import tool
-
-from ..app_ctx import Constants, ctx
-from .load_core_memories import load_core_memories
+from langchain_core.runnables.config import ensure_config
+from ..app_ctx import ctx
 
 
 @tool
-def save_core_memories(key: str, value: str) -> str:
-    """Store a core memory about the user in key-value format.
+async def save_core_memories(key: str, value: str) -> str:
+    """Store or update a memory about the user. Use this to remember important information about the user.
 
     Args:
-        key (str): The key/type of the memory (e.g., "name", "age").
-        value (str): The value to store.
+        key: The type of information to store. Use dot notation for nested information.
+            Examples: 'name', 'age', 'preferences.food', 'family.spouse.name'
+        value: The value to remember.
+            Examples: 'John', '25', 'pizza', 'Mary'
+
+    Example usage:
+        - save_core_memories('name', 'John')
+        - save_core_memories('preferences.food', 'pizza')
+        - save_core_memories('family.children.count', '2')
 
     Returns:
-        str: A confirmation message.
+        A confirmation message indicating the memory was stored.
     """
     config = ensure_config()
-    configurable = ctx.ensure_configurable(config)
-    path, existing_memories = load_core_memories(configurable["user_id"])
-
-    existing_memories[key] = value
-
-    ctx.core_memory_adapter.upsert(
-        ctx.settings.core_collection,
-        [path],
-        [{
-            Constants.PAYLOAD_KEY: json.dumps({"memories": existing_memories}),
-            Constants.PATH_KEY: path,
-            Constants.TIMESTAMP_KEY: datetime.now(tz=timezone.utc).isoformat(),
-            Constants.TYPE_KEY: "core",
-            "user_id": configurable["user_id"],
-        }],
-        [json.dumps({"memories": existing_memories})]
-    )
-    return f"Memory stored with key: {key}"
+    user_id = ctx.ensure_configurable(config)["user_id"]
+    
+    await ctx.core_memory_adapter.save_memory(user_id, key, value)
+    return f"Memory stored: {key} = {value}"

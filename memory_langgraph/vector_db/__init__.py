@@ -1,7 +1,7 @@
-from .chroma_adapter import ChromaAdapter
+from .mongo_adapter import MongoAdapter
 from .qdrant_adapter import QdrantAdapter
 
 __all__ = [
-    "ChromaAdapter",
+    "MongoAdapter",
     "QdrantAdapter",
 ]
